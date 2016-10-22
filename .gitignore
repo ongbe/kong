@@ -1,0 +1,14 @@
+# .gitignore
+
+# files
+*.o
+*.log
+*.db
+.ycm_extra_conf.py*
+ctp
+
+# dir
+log/
+tmp/
+build/
+3rdparty/
