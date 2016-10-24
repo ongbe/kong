@@ -19,4 +19,9 @@ clean:
 	rm -f $(TARGETS)
 	rm -f src/*.o
 
-.PHONY: clean
+install: $(TARGETS)
+	install -D -m 755 -t $(PREFIX) $(TARGETS)
+	install -D -m 755 -t $(PREFIX)/lib lib/*
+	install -D -m 644 -t $(PREFIX) ctp.sql ctp.xml
+
+.PHONY: clean install

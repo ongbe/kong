@@ -4,12 +4,9 @@
 #include "ThostFtdcMdApi.h"
 #include "contract_tick.h"
 #include <glog/logging.h>
-#include <cstdlib>
 #include <cctype>
-#include <string>
-#include <iostream>
-#include <thread>
-using namespace std;
+#include <cstring>
+#include <vector>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -26,7 +23,6 @@ class market_if : public CThostFtdcMdSpi {
 private:
 	// market api, heap resources
 	CThostFtdcMdApi *api;
-	thread *api_thread;
 	int api_reqid;
 
 private:
@@ -46,7 +42,6 @@ public:
 	market_if(char const *market_addr, char const *broker_id,
 			char const *username, char const *password, char const *contract_codes)
 		: api(NULL)
-		, api_thread(NULL)
 		, api_reqid(0)
 		, udata(NULL)
 		, tick_event(NULL)
@@ -56,40 +51,20 @@ public:
 		strncpy(this->username, username, sizeof(this->username));
 		strncpy(this->password, password, sizeof(this->password));
 		strncpy(this->contract_codes, contract_codes, sizeof(this->contract_codes));
-		api_init();
+
+		api = CThostFtdcMdApi::CreateFtdcMdApi("/tmp/");
+		api->Init();
+		api->RegisterSpi(this);
+		api->RegisterFront(this->market_addr);
 	}
 
 	virtual ~market_if()
 	{
 		if (api)
 			api->Release();
-
-		if (api_thread)
-			delete api_thread;
 	}
 
 private:
-	void api_init()
-	{
-		api = CThostFtdcMdApi::CreateFtdcMdApi("/tmp/");
-
-		market_if *that = this;
-		api_thread = new thread([that] () -> void {
-			try {
-				LOG(INFO) << "initializing market spi ...";
-				that->api->RegisterSpi(that);
-				that->api->RegisterFront(that->market_addr);
-				that->api->Init();
-				that->api->Join();
-
-				LOG(INFO) << "uninitializing market spi ...";
-				that->api->Release();
-			} catch (...) {
-				LOG(FATAL) << "catched exception in market_if thread!";
-			}
-		});
-	}
-
 	int login()
 	{
 		CThostFtdcReqUserLoginField req;
@@ -105,7 +80,7 @@ private:
 		char buf[sizeof(contract_codes)];
 		memcpy(buf, contract_codes, sizeof(buf));
 
-		vector<char*> id_tab;
+		std::vector<char*> id_tab;
 		id_tab.push_back(&buf[0]);
 
 		for (uint16_t i = 0; i < sizeof(buf); i++) {

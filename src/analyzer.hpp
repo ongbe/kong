@@ -1,9 +1,9 @@
-#ifndef _ANALYZER_HPP
-#define _ANALYZER_HPP
+#ifndef _ANALYZER_H
+#define _ANALYZER_H
 
 #include "contract_tick.h"
 #include <sqlite3.h>
-#include <stdio.h>
+#include <cstdio>
 
 namespace ctp {
 
@@ -12,7 +12,7 @@ private:
 	sqlite3 *db;
 
 public:
-	analyzer()
+	analyzer(): db(NULL)
 	{
 		sqlite3_open("./ctp.db", &db);
 		sqlite3_exec(db, "PRAGMA journal_mode = WAL", NULL, NULL, NULL);
@@ -21,13 +21,16 @@ public:
 
 	~analyzer()
 	{
-		sqlite3_close(db);
+		if (db) {
+			sqlite3_close(db);
+			db = NULL;
+		}
 	}
 
 public:
-	void add_tick(struct contract_tick &tick)
+	inline void add_tick(struct contract_tick &tick)
 	{
-		char sql[1024];
+		static char sql[1024];
 		snprintf(sql, sizeof(sql), "INSERT INTO contract_tick"
 				"(contract_code, trading_day, last_time, last_price, last_volume,"
 				"sell_price, sell_volume, buy_price, buy_volume, open_volume)"

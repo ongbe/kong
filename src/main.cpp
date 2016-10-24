@@ -4,8 +4,10 @@
 #include <glog/logging.h>
 #include <vector>
 #include <pthread.h>
+#include <signal.h>
 using namespace ctp;
 
+static int runflag = 1;
 static rc_t rc;
 static analyzer aly;
 static std::vector<contract_tick> ticktab;
@@ -20,7 +22,7 @@ void on_tick_event(contract_tick &tick, void *udata)
 
 void run_analyzer()
 {
-	while (1) {
+	while (runflag) {
 		if (ticktab.size() == 0) {
 			usleep(100 * 1000);
 			continue;
@@ -33,17 +35,28 @@ void run_analyzer()
 	}
 }
 
+void signal_handler(int sig)
+{
+	runflag = 0;
+}
+
 int main(int argc, char *argv[])
 {
-	// init
+	// init glog
 	FLAGS_log_dir = "./log";
 	FLAGS_minloglevel = google::INFO;
 	FLAGS_stderrthreshold = google::INFO;
 	FLAGS_colorlogtostderr = true;
 	google::InitGoogleLogging(argv[0]);
 
+	// init rc
 	rc_from_file(&rc, "./ctp.xml");
+
+	// init mutex for ticktab
 	pthread_mutex_init(&tick_mutex, NULL);
+
+	// set signals
+	signal(SIGINT, signal_handler);
 
 	// run market_if
 	market_if *mif = new market_if(rc.market_addr, rc.broker_id,
@@ -56,6 +69,7 @@ int main(int argc, char *argv[])
 	run_analyzer();
 
 	// fini
+	delete mif;
 	pthread_mutex_destroy(&tick_mutex);
 	google::ShutdownGoogleLogging();
 	return 0;
