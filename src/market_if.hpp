@@ -76,13 +76,13 @@ private:
 		market_if *that = this;
 		api_thread = new thread([that] () -> void {
 			try {
-				LOG(INFO) << "Initializing market spi ...";
+				LOG(INFO) << "initializing market spi ...";
 				that->api->RegisterSpi(that);
 				that->api->RegisterFront(that->market_addr);
 				that->api->Init();
 				that->api->Join();
 
-				LOG(INFO) << "Uninitializing market spi ...";
+				LOG(INFO) << "uninitializing market spi ...";
 				that->api->Release();
 			} catch (...) {
 				LOG(FATAL) << "catched exception in market_if thread!";
@@ -162,12 +162,11 @@ public:
 	virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 	{
 		if (pRspInfo->ErrorID) {
-			LOG(FATAL) << "OnRspUserLogin Failure!"
-				<< " ErrorID: " << pRspInfo->ErrorID
-				<< " ErrorMsg: " << pRspInfo->ErrorMsg;
+			LOG(FATAL) << "ErrorID: " << pRspInfo->ErrorID
+				<< " ,ErrorMsg: " << pRspInfo->ErrorMsg;
 			exit(EXIT_FAILURE);
 		}
-		LOG(INFO) << "OnRspUserLogin Success!";
+		LOG(INFO) << "success to login";
 
 		subscribe_market_data();
 	}
@@ -187,13 +186,23 @@ public:
 	///订阅行情应答
 	virtual void OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 	{
-		LOG(INFO) << "OnRspSubMarketData ...";
+		if (pRspInfo->ErrorID) {
+			LOG(FATAL) << "ErrorID: " << pRspInfo->ErrorID
+				<< " ,ErrorMsg: " << pRspInfo->ErrorMsg;
+			exit(EXIT_FAILURE);
+		}
+		LOG(INFO) << "success to subscribe " << pSpecificInstrument->InstrumentID;
 	}
 
 	///取消订阅行情应答
 	virtual void OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 	{
-		LOG(INFO) << "OnRspUnSubMarketData ...";
+		if (pRspInfo->ErrorID) {
+			LOG(FATAL) << "ErrorID: " << pRspInfo->ErrorID
+				<< " ,ErrorMsg: " << pRspInfo->ErrorMsg;
+			exit(EXIT_FAILURE);
+		}
+		LOG(INFO) << "success to unsubscribe " << pSpecificInstrument->InstrumentID;
 	}
 
 	///订阅询价应答
@@ -217,7 +226,8 @@ public:
 		boost::posix_time::ptime time = boost::posix_time::ptime(
 				boost::gregorian::from_undelimited_string(pDepthMarketData->ActionDay),
 				boost::posix_time::duration_from_string(pDepthMarketData->UpdateTime));
-		strncpy(tick.last_time, to_simple_string(time).c_str(), sizeof(tick.last_time));
+		strncpy(tick.last_time, to_iso_extended_string(time).c_str(), sizeof(tick.last_time));
+		tick.last_time[10] = ' ';
 		tick.last_price = pDepthMarketData->LastPrice;
 		tick.last_day_volume = pDepthMarketData->Volume;
 		tick.sell_price = pDepthMarketData->AskPrice1;

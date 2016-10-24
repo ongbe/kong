@@ -12,11 +12,11 @@
     <password>000000</password>
     <contracts>
       <contract name="ag1612" data_days="12" candle_period="15" ma_cycle="60"/>
-      <contract name="rb1610" data_days="12" candle_period="15" ma_cycle="60"/>
-      <contract name="m1609" data_days="12" candle_period="15" ma_cycle="60"/>
-      <contract name="p1609" data_days="12" candle_period="15" ma_cycle="60"/>
-      <contract name="MA609" data_days="12" candle_period="15" ma_cycle="60"/>
-      <contract name="TA609" data_days="12" candle_period="15" ma_cycle="60"/>
+      <contract name="rb1701" data_days="12" candle_period="15" ma_cycle="60"/>
+      <contract name="m1701" data_days="12" candle_period="15" ma_cycle="60"/>
+      <contract name="p1701" data_days="12" candle_period="15" ma_cycle="60"/>
+      <contract name="MA701" data_days="12" candle_period="15" ma_cycle="60"/>
+      <contract name="TA701" data_days="12" candle_period="15" ma_cycle="60"/>
     </contracts>
   </market>
 
