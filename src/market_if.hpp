@@ -2,11 +2,10 @@
 #define _MARKET_IF_H
 
 #include "ThostFtdcMdApi.h"
-#include "contract_tick.h"
+#include "contract.h"
 #include <glog/logging.h>
 #include <cctype>
 #include <cstring>
-#include <vector>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -31,37 +30,69 @@ private:
 	char broker_id[64];
 	char username[64];
 	char password[64];
-	char contract_codes[256]; // separated by ' '
 
 public:
 	// signals
 	void *udata;
-	void (*tick_event)(contract_tick &tick, void *udata);
+	void (*login_event)(market_if *sender, void *udata);
+	void (*tick_event)(market_if *sender, void *udata, contract_tick &tick);
 
 public:
 	market_if(char const *market_addr, char const *broker_id,
-			char const *username, char const *password, char const *contract_codes)
+			char const *username, char const *password)
 		: api(NULL)
 		, api_reqid(0)
 		, udata(NULL)
+		, login_event(NULL)
 		, tick_event(NULL)
 	{
 		strncpy(this->market_addr, market_addr, sizeof(this->market_addr));
 		strncpy(this->broker_id, broker_id, sizeof(this->broker_id));
 		strncpy(this->username, username, sizeof(this->username));
 		strncpy(this->password, password, sizeof(this->password));
-		strncpy(this->contract_codes, contract_codes, sizeof(this->contract_codes));
-
 		api = CThostFtdcMdApi::CreateFtdcMdApi("/tmp/");
-		api->Init();
-		api->RegisterSpi(this);
-		api->RegisterFront(this->market_addr);
 	}
 
 	virtual ~market_if()
 	{
 		if (api)
 			api->Release();
+	}
+
+public:
+	void run()
+	{
+		api->RegisterSpi(this);
+		api->RegisterFront(this->market_addr);
+		api->Init();
+	}
+
+	int subscribe_market_data(const char *codes, size_t count = 1)
+	{
+		// easy way when count == 1
+		if (count == 1)
+			return api->SubscribeMarketData(const_cast<char**>(&codes), 1);
+
+		// hard way when count > 1
+		char buf[strlen(codes)+1];
+		strncpy(buf, codes, sizeof(buf));
+
+		char *ids[count];
+		size_t index = 0;
+		ids[index++] = buf;
+
+		for (uint16_t i = 0; i < sizeof(buf) && index < count; i++) {
+			if (buf[i] == 0)
+				break;
+
+			if (isspace(buf[i])) {
+				buf[i] = 0;
+				if (isalpha(buf[i+1]))
+					ids[index++] = buf + i + 1;
+			}
+		}
+
+		return api->SubscribeMarketData(ids, count);
 	}
 
 private:
@@ -73,32 +104,6 @@ private:
 		strncpy(req.UserID, username, sizeof(req.UserID));
 		strncpy(req.Password, password, sizeof(req.Password));
 		return api->ReqUserLogin(&req, api_reqid++);
-	}
-
-	int subscribe_market_data()
-	{
-		char buf[sizeof(contract_codes)];
-		memcpy(buf, contract_codes, sizeof(buf));
-
-		std::vector<char*> id_tab;
-		id_tab.push_back(&buf[0]);
-
-		for (uint16_t i = 0; i < sizeof(buf); i++) {
-			if (buf[i] == 0)
-				break;
-
-			if (isspace(buf[i])) {
-				buf[i] = 0;
-				if (isalpha(buf[i+1]))
-					id_tab.push_back(buf + i + 1);
-			}
-		}
-
-		char *ids[id_tab.size()];
-		for (uint16_t i = 0; i < id_tab.size(); i++)
-			ids[i] = id_tab.at(i);
-
-		return api->SubscribeMarketData(ids, id_tab.size());
 	}
 
 public:
@@ -143,7 +148,8 @@ public:
 		}
 		LOG(INFO) << "success to login";
 
-		subscribe_market_data();
+		if (login_event)
+			login_event(this, udata);
 	}
 
 	///登出请求响应
@@ -212,7 +218,7 @@ public:
 		tick.open_volume = pDepthMarketData->OpenInterest;
 
 		if (tick_event)
-			tick_event(tick, udata);
+			tick_event(this, udata, tick);
 	}
 
 	///询价通知

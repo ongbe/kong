@@ -6,7 +6,6 @@ typedef struct __rc {
 	char broker_id[64];
 	char username[64];
 	char password[64];
-	char contract_codes[256]; // separated by ' '
 } rc_t;
 
 void rc_from_file(rc_t *rc, const char * const filepath);

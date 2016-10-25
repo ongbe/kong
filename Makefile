@@ -12,7 +12,7 @@ TARGETS = $(CTP)
 
 all: $(TARGETS)
 
-$(CTP): src/main.o src/rc.o src/*.hpp
+$(CTP): src/main.o src/rc.o
 	g++ $(CPPFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:

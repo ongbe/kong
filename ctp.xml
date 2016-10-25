@@ -1,23 +1,9 @@
 <conf>
-  <verbose>false</verbose>
-  <boll_deviate>0.236</boll_deviate>
-  <golden_ratio>1.618</golden_ratio>
-  <close_mode>0</close_mode>
-  <strategy>./script/strategy_kdj.lua</strategy>
-
   <market>
     <market_addr>tcp://27.115.56.234:41213</market_addr>
     <broker_id>8050</broker_id>
     <username>000000</username>
     <password>000000</password>
-    <contracts>
-      <contract name="ag1612" data_days="12" candle_period="15" ma_cycle="60"/>
-      <contract name="rb1701" data_days="12" candle_period="15" ma_cycle="60"/>
-      <contract name="m1701" data_days="12" candle_period="15" ma_cycle="60"/>
-      <contract name="p1701" data_days="12" candle_period="15" ma_cycle="60"/>
-      <contract name="MA701" data_days="12" candle_period="15" ma_cycle="60"/>
-      <contract name="TA701" data_days="12" candle_period="15" ma_cycle="60"/>
-    </contracts>
   </market>
 
   <trader>
@@ -25,13 +11,5 @@
     <broker_id>8050</broker_id>
     <username>000000</username>
     <password>000000</password>
-    <contracts>
-      <contract name="ag1612" hand_rate="15" hand_min="1" hand_max="1" hand_cur="1" force_close_date="20120625" force_close_days="0" can_trade="false"/>
-      <contract name="rb1610" hand_rate="10" hand_min="1" hand_max="1" hand_cur="1" force_close_date="20120625" force_close_days="0" can_trade="false"/>
-      <contract name="m1609" hand_rate="10" hand_min="1" hand_max="1" hand_cur="1" force_close_date="20120625" force_close_days="0" can_trade="false"/>
-      <contract name="p1609" hand_rate="10" hand_min="1" hand_max="1" hand_cur="1" force_close_date="20120625" force_close_days="0" can_trade="false"/>
-      <contract name="MA609" hand_rate="10" hand_min="1" hand_max="1" hand_cur="1" force_close_date="20120625" force_close_days="0" can_trade="false"/>
-      <contract name="TA609" hand_rate="5" hand_min="1" hand_max="1" hand_cur="1" force_close_date="20120625" force_close_days="0" can_trade="false"/>
-    </contracts>
   </trader>
 </conf>
