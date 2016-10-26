@@ -23,7 +23,7 @@ public:
 
 		char **dbresult;
 		int nrow, ncolumn;
-		sqlite3_get_table(db, "SELECT code, cn_code, exchange,"
+		sqlite3_get_table(db, "SELECT code, cn_code, exchange, byseason,"
 				"code_format, main_month FROM contract WHERE active = 1",
 				&dbresult, &nrow, &ncolumn, NULL);
 
@@ -32,8 +32,9 @@ public:
 			snprintf(tra.code, sizeof(tra.code), "%s", dbresult[i*ncolumn+0]);
 			snprintf(tra.cn_code, sizeof(tra.cn_code), "%s", dbresult[i*ncolumn+1]);
 			snprintf(tra.exchange, sizeof(tra.exchange), "%s", dbresult[i*ncolumn+2]);
-			snprintf(tra.code_format, sizeof(tra.code_format), "%s", dbresult[i*ncolumn+3]);
-			snprintf(tra.main_month, sizeof(tra.main_month), "%s", dbresult[i*ncolumn+4]);
+			tra.byseason = atoi(dbresult[i*ncolumn+3]);
+			snprintf(tra.code_format, sizeof(tra.code_format), "%s", dbresult[i*ncolumn+4]);
+			snprintf(tra.main_month, sizeof(tra.main_month), "%s", dbresult[i*ncolumn+5]);
 			contracts.push_back(tra);
 		}
 	}

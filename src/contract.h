@@ -9,6 +9,7 @@ struct contract {
 	char exchange[32+1];
 	char code_format[4+1];
 	char main_month[35];
+	int byseason;
 };
 
 struct contract_tick {
