@@ -8,20 +8,21 @@ LDFLAGS = -lboost_date_time -lsqlite3 -lglog $(LIBDIR)/*.so
 
 # targets
 CTP = ctp
-TARGETS = $(CTP)
+TARGET = $(CTP)
 
-all: $(TARGETS)
+all: $(TARGET)
 
 $(CTP): src/main.o src/rc.o
 	g++ $(CPPFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
-	rm -f $(TARGETS)
+	rm -f $(TARGET)
 	rm -f src/*.o
 
-install: $(TARGETS)
-	install -D -m 755 -t $(PREFIX) $(TARGETS)
-	install -D -m 755 -t $(PREFIX)/lib lib/*
-	install -D -m 644 -t $(PREFIX) ctp.sql ctp.xml
+install: $(TARGET)
+	mkdir -p $(PREFIX)
+	install -m 755 $(TARGET)       $(PREFIX)
+	install -m 755 lib/*           $(PREFIX)/lib
+	install -m 644 ctp.sql ctp.xml $(PREFIX)
 
 .PHONY: clean install
