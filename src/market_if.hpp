@@ -202,13 +202,22 @@ public:
 	virtual void OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 	{
 		contract_tick tick;
+
+		// code
 		memcpy(tick.contract_code, pDepthMarketData->InstrumentID, sizeof(tick.contract_code));
 		strncpy(tick.trading_day, pDepthMarketData->TradingDay, sizeof(tick.trading_day));
+
+		// last time, ActionDay from DaLian is 24h earlier than real time at night
 		boost::posix_time::ptime time = boost::posix_time::ptime(
 				boost::gregorian::from_undelimited_string(pDepthMarketData->ActionDay),
 				boost::posix_time::duration_from_string(pDepthMarketData->UpdateTime));
+		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
+		if (time - now > boost::posix_time::time_duration(23, 0, 0))
+			time -= boost::posix_time::time_duration(24, 0, 0);
 		strncpy(tick.last_time, to_iso_extended_string(time).c_str(), sizeof(tick.last_time));
 		tick.last_time[10] = ' ';
+
+		// price & volume
 		tick.last_price = pDepthMarketData->LastPrice;
 		tick.last_day_volume = pDepthMarketData->Volume;
 		tick.sell_price = pDepthMarketData->AskPrice1;
