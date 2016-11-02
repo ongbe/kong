@@ -1,7 +1,7 @@
 #ifndef _ANALYZER_H
 #define _ANALYZER_H
 
-#include "contract.h"
+#include "ctp_types.h"
 #include <sqlite3.h>
 #include <cstdio>
 #include <cstdlib>
@@ -12,7 +12,7 @@ namespace ctp {
 class analyzer {
 private:
 	sqlite3 *db;
-	std::list<contract> contracts;
+	std::list<futures_contract_base> contracts;
 
 public:
 	analyzer(): db(NULL)
@@ -24,11 +24,11 @@ public:
 		char **dbresult;
 		int nrow, ncolumn;
 		sqlite3_get_table(db, "SELECT code, cn_code, exchange, byseason,"
-				"code_format, main_month FROM contract WHERE active = 1",
+				"code_format, main_month FROM futures_contract_base WHERE active = 1",
 				&dbresult, &nrow, &ncolumn, NULL);
 
 		for (int i = 1; i < nrow; i++) {
-			contract tra;
+			futures_contract_base tra;
 			snprintf(tra.code, sizeof(tra.code), "%s", dbresult[i*ncolumn+0]);
 			snprintf(tra.cn_code, sizeof(tra.cn_code), "%s", dbresult[i*ncolumn+1]);
 			snprintf(tra.exchange, sizeof(tra.exchange), "%s", dbresult[i*ncolumn+2]);
@@ -48,23 +48,22 @@ public:
 	}
 
 public:
-	std::list<contract>& get_contracts()
+	std::list<futures_contract_base>& get_contracts()
 	{
 		return contracts;
 	}
 
-	inline void add_tick(struct contract_tick &tick)
+	inline void add_tick(struct futures_tick &tick)
 	{
 		static char sql[1024];
-		snprintf(sql, sizeof(sql), "INSERT INTO contract_tick"
+		snprintf(sql, sizeof(sql), "INSERT INTO futures_tick"
 				"(contract_code, trading_day, last_time, last_price, last_volume,"
-				"sell_price, sell_volume, buy_price, buy_volume, open_volume)"
-				" VALUES('%s', '%s', '%s',  %lf, %u, %lf, %u, %lf, %u,  %lf)",
-				tick.contract_code, tick.trading_day, tick.last_time,
-				tick.last_price, tick.last_day_volume,
-				tick.sell_price, tick.sell_volume,
-				tick.buy_price, tick.buy_volume,
-				tick.open_volume);
+				"sell_price, sell_volume, buy_price, buy_volume, day_volume, open_interest)"
+				" VALUES('%s', '%s',  %ld, %lf, %ld,  %lf, %ld, %lf, %ld,  %ld, %ld)",
+				tick.contract_code, tick.trading_day,
+				tick.t.last_time, tick.t.last_price, tick.t.last_volume,
+				tick.sell_price, tick.sell_volume, tick.buy_price, tick.buy_volume,
+				tick.day_volume, tick.open_interest);
 		sqlite3_exec(db, sql, NULL, NULL, NULL);
 	}
 

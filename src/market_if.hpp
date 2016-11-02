@@ -2,10 +2,12 @@
 #define _MARKET_IF_H
 
 #include "ThostFtdcMdApi.h"
-#include "contract.h"
+#include "ctp_types.h"
 #include <glog/logging.h>
 #include <cctype>
 #include <cstring>
+#include <map>
+#include <string>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
@@ -23,6 +25,7 @@ private:
 	// market api, heap resources
 	CThostFtdcMdApi *api;
 	int api_reqid;
+	std::map<std::string, long> voltab;
 
 private:
 	// rc
@@ -35,7 +38,7 @@ public:
 	// signals
 	void *udata;
 	void (*login_event)(market_if *sender, void *udata);
-	void (*tick_event)(market_if *sender, void *udata, contract_tick &tick);
+	void (*tick_event)(market_if *sender, void *udata, futures_tick &tick);
 
 public:
 	market_if(char const *market_addr, char const *broker_id,
@@ -201,30 +204,43 @@ public:
 	///深度行情通知
 	virtual void OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 	{
-		contract_tick tick;
+		// get pre volume relative to this tick
+		auto pre_volume_iter = voltab.find(pDepthMarketData->InstrumentID);
+		if (pre_volume_iter == voltab.end())
+			pre_volume_iter = voltab.insert(std::make_pair(pDepthMarketData->InstrumentID, 0)).first;
 
-		// code
-		memcpy(tick.contract_code, pDepthMarketData->InstrumentID, sizeof(tick.contract_code));
-		strncpy(tick.trading_day, pDepthMarketData->TradingDay, sizeof(tick.trading_day));
+		// skip tick with no volume
+		if (pDepthMarketData->Volume == pre_volume_iter->second)
+			return;
 
 		// last time, ActionDay from DaLian is 24h earlier than real time at night
 		boost::posix_time::ptime time = boost::posix_time::ptime(
 				boost::gregorian::from_undelimited_string(pDepthMarketData->ActionDay),
 				boost::posix_time::duration_from_string(pDepthMarketData->UpdateTime));
-		boost::posix_time::ptime now = boost::posix_time::second_clock::local_time();
-		if (time - now > boost::posix_time::time_duration(23, 0, 0))
+		boost::posix_time::ptime pnow = boost::posix_time::second_clock::local_time();
+		if (time - pnow > boost::posix_time::time_duration(23, 0, 0))
 			time -= boost::posix_time::time_duration(24, 0, 0);
-		strncpy(tick.last_time, to_iso_extended_string(time).c_str(), sizeof(tick.last_time));
-		tick.last_time[10] = ' ';
+		struct tm tnow = boost::posix_time::to_tm(pnow);
+
+		// tick base
+		futures_tick tick;
+		tick.t.last_time = mktime(&tnow);
+		tick.t.last_price = pDepthMarketData->LastPrice;
+		tick.t.last_volume = pDepthMarketData->Volume - pre_volume_iter->second;
 
 		// price & volume
-		tick.last_price = pDepthMarketData->LastPrice;
-		tick.last_day_volume = pDepthMarketData->Volume;
 		tick.sell_price = pDepthMarketData->AskPrice1;
 		tick.sell_volume = pDepthMarketData->AskVolume1;
 		tick.buy_price = pDepthMarketData->BidPrice1;
 		tick.buy_volume = pDepthMarketData->BidVolume1;
-		tick.open_volume = pDepthMarketData->OpenInterest;
+		tick.day_volume = pDepthMarketData->Volume;
+		tick.open_interest = pDepthMarketData->OpenInterest;
+
+		// code
+		memcpy(tick.contract_code, pDepthMarketData->InstrumentID, sizeof(tick.contract_code));
+		strncpy(tick.trading_day, pDepthMarketData->TradingDay, sizeof(tick.trading_day));
+
+		pre_volume_iter->second = pDepthMarketData->Volume;
 
 		if (tick_event)
 			tick_event(this, udata, tick);

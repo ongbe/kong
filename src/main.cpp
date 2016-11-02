@@ -12,7 +12,7 @@ using namespace ctp;
 static int runflag = 1;
 static rc_t rc;
 static analyzer aly;
-static std::vector<contract_tick> ticktab;
+static std::vector<futures_tick> ticktab;
 static pthread_mutex_t tick_mutex;
 
 void on_login_event(market_if *sender, void *udata)
@@ -24,7 +24,7 @@ void on_login_event(market_if *sender, void *udata)
 	// convert to real month [1 ~ 12]
 	int mon = tnow->tm_mon + 1;
 
-	std::list<contract> tab = aly.get_contracts();
+	std::list<futures_contract_base> tab = aly.get_contracts();
 	for (auto iter = tab.begin(); iter != tab.end(); ++iter) {
 		// not clear how to deal with contracts which affected byseason
 		if (!iter->byseason)
@@ -50,7 +50,7 @@ void on_login_event(market_if *sender, void *udata)
 	}
 }
 
-void on_tick_event(market_if *sender, void *udata, contract_tick &tick)
+void on_tick_event(market_if *sender, void *udata, futures_tick &tick)
 {
 	pthread_mutex_lock(&tick_mutex);
 	ticktab.push_back(tick);
