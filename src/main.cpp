@@ -1,5 +1,5 @@
 #include "rc.h"
-#include "analyzer.hpp"
+#include "analyzer.h"
 #include "market_if.hpp"
 #include <glog/logging.h>
 #include <ctime>
@@ -9,10 +9,11 @@
 #include <signal.h>
 using namespace ctp;
 
-static int runflag = 1;
-static analyzer *aly;
 static std::vector<futures_tick> ticktab;
 static pthread_mutex_t tick_mutex;
+
+static int runflag = 1;
+static analyzer *aly;
 
 void on_login_event(market_if *sender, void *udata)
 {
@@ -90,11 +91,11 @@ int main(int argc, char *argv[])
 	// init rc
 	rc_from_file(&rc, "./ctp.xml");
 
-	// init mutex for ticktab
-	pthread_mutex_init(&tick_mutex, NULL);
-
 	// set signals
 	signal(SIGINT, signal_handler);
+
+	// init mutex for ticktab
+	pthread_mutex_init(&tick_mutex, NULL);
 
 	// run analyzer
 	aly = new analyzer;
