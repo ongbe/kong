@@ -15,6 +15,8 @@ namespace ctp {
 template <class Iterator>
 bar_t mkbar(Iterator begin, Iterator end)
 {
+	int index = 0;
+
 	// init bar with first tick
 	bar_t bar;
 	bar.begin_time = begin->last_time;
@@ -23,7 +25,10 @@ bar_t mkbar(Iterator begin, Iterator end)
 	bar.close = begin->last_price;
 	bar.high = begin->last_price;
 	bar.low = begin->last_price;
+	bar.avg = begin->last_price;
+	bar.wavg = begin->last_price * begin->last_volume;
 	bar.volume = begin->last_volume;
+	index++;
 
 	// other ticks
 	Iterator iter = begin;
@@ -35,9 +40,14 @@ bar_t mkbar(Iterator begin, Iterator end)
 			bar.high = iter->last_price;
 		if (bar.low > iter->last_price)
 			bar.low = iter->last_price;
+		bar.avg += iter->last_price;
+		bar.wavg += iter->last_price * iter->last_volume;
 		bar.volume += iter->last_volume;
+		index++;
 	}
 
+	bar.avg /= index;
+	bar.wavg /= bar.volume;
 	return bar;
 }
 
@@ -105,11 +115,11 @@ public:
 		// insert tick into futures_tick
 		char sql[1024];
 		snprintf(sql, sizeof(sql), "INSERT INTO futures_tick"
-				"(contract_code, trading_day, last_time, last_price, last_volume,"
+				"(contract_code, trading_day, last_time, last_volume, last_price,"
 				"sell_price, sell_volume, buy_price, buy_volume, day_volume, open_interest)"
-				" VALUES('%s', '%s',  %ld, %lf, %ld,  %lf, %ld, %lf, %ld,  %ld, %ld)",
+				" VALUES('%s', '%s',  %ld, %ld, %lf,  %lf, %ld, %lf, %ld,  %ld, %ld)",
 				tick.contract_code, tick.trading_day,
-				tick.t.last_time, tick.t.last_price, tick.t.last_volume,
+				tick.t.last_time, tick.t.last_volume, tick.t.last_price,
 				tick.sell_price, tick.sell_volume, tick.buy_price, tick.buy_volume,
 				tick.day_volume, tick.open_interest);
 		sqlite3_exec(db, sql, NULL, NULL, NULL);
@@ -128,11 +138,11 @@ public:
 			ticktab.erase(ticktab.begin(), cur);
 			minbars.push_back(bar);
 			snprintf(sql, sizeof(sql), "INSERT INTO futures_bar_min(contract_code, trading_day,"
-					"begin_time, end_time, open, close, high, low, volume)"
-					" VALUES('%s', '%s',  %ld, %ld,  %lf, %lf, %lf, %lf, %ld)",
+					"begin_time, end_time, volume, open, close, high, low, avg, wavg)"
+					" VALUES('%s', '%s',  %ld, %ld,  %ld, %lf, %lf, %lf, %lf, %lf, %lf)",
 					tick.contract_code, tick.trading_day,
 					bar.begin_time, bar.end_time,
-					bar.open, bar.close, bar.high, bar.low, bar.volume);
+					bar.volume, bar.open, bar.close, bar.high, bar.low, bar.avg, bar.wavg);
 			sqlite3_exec(db, sql, NULL, NULL, NULL);
 		}
 	}

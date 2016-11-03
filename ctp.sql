@@ -5,13 +5,13 @@ CREATE TABLE futures_tick(
 	trading_day   CHAR(10) NOT NULL,
 
 	last_time     BIGINT NOT NULL,
-	last_price    DOUBLE NOT NULL,
 	last_volume   BIGINT NOT NULL,
+	last_price    DOUBLE NOT NULL,
 
-	sell_price    DOUBLE NOT NULL,
 	sell_volume   BIGINT NOT NULL,
-	buy_price     DOUBLE NOT NULL,
+	sell_price    DOUBLE NOT NULL,
 	buy_volume    BIGINT NOT NULL,
+	buy_price     DOUBLE NOT NULL,
 
 	day_volume    BIGINT NOT NULL,
 	open_interest BIGINT NOT NULL
@@ -25,11 +25,13 @@ CREATE TABLE futures_bar_min(
 
 	begin_time    BIGINT NOT NULL,
 	end_time      BIGINT NOT NULL,
+	volume        BIGINT NOT NULL,
 	open          DOUBLE NOT NULL,
 	close         DOUBLE NOT NULL,
 	high          DOUBLE NOT NULL,
 	low           DOUBLE NOT NULL,
-	volume        BIGINT NOT NULL
+	avg           DOUBLE NOT NULL,
+	wavg          DOUBLE NOT NULL
 );
 
 DROP TABLE IF EXISTS futures_contract_base;

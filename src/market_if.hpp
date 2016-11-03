@@ -229,14 +229,14 @@ public:
 		// tick base
 		futures_tick tick;
 		tick.t.last_time = mktime(&tnow);
-		tick.t.last_price = pDepthMarketData->LastPrice;
 		tick.t.last_volume = pDepthMarketData->Volume - pre_volume_iter->second;
+		tick.t.last_price = pDepthMarketData->LastPrice;
 
 		// price & volume
-		tick.sell_price = pDepthMarketData->AskPrice1;
 		tick.sell_volume = pDepthMarketData->AskVolume1;
-		tick.buy_price = pDepthMarketData->BidPrice1;
+		tick.sell_price = pDepthMarketData->AskPrice1;
 		tick.buy_volume = pDepthMarketData->BidVolume1;
+		tick.buy_price = pDepthMarketData->BidPrice1;
 		tick.day_volume = pDepthMarketData->Volume;
 		tick.open_interest = pDepthMarketData->OpenInterest;
 

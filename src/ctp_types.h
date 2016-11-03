@@ -5,19 +5,21 @@
 
 typedef struct __tick_base {
 	time_t last_time;
-	double last_price;
 	long   last_volume;
+	double last_price;
 } tick_t;
 
 typedef struct __bar_base {
 	time_t begin_time;
 	time_t end_time;
 
+	long volume;
 	double open;
 	double close;
 	double high;
 	double low;
-	long volume;
+	double avg;
+	double wavg;
 } bar_t;
 
 struct futures_contract_base {
@@ -32,10 +34,10 @@ struct futures_contract_base {
 struct futures_tick {
 	tick_t t;
 
-	double sell_price;
 	long sell_volume;
-	double buy_price;
+	double sell_price;
 	long buy_volume;
+	double buy_price;
 
 	char contract_code[31]; // IntrumentID
 	char trading_day[11];
