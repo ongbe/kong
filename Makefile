@@ -4,7 +4,7 @@ INCLUDEDIR = ./include
 LIBDIR = ./lib
 
 CPPFLAGS = -Wall -O2 -g -std=gnu++11 -I$(INCLUDEDIR)
-LDFLAGS = -lboost_date_time -lsqlite3 -lglog $(LIBDIR)/*.so
+LDFLAGS = -lpthread -lboost_date_time -lsqlite3 -lglog $(LIBDIR)/*.so
 
 # targets
 CTP = ctp
@@ -21,6 +21,8 @@ clean:
 
 install: $(TARGET)
 	mkdir -p $(PREFIX)
+	mkdir -p $(PREFIX)/lib
+	mkdir -p $(PREFIX)/log
 	install -m 755 $(TARGET)       $(PREFIX)
 	install -m 755 lib/*           $(PREFIX)/lib
 	install -m 644 ctp.sql ctp.xml $(PREFIX)

@@ -2,7 +2,9 @@
 #define _ANALYZER_H
 
 #include "ctp_types.h"
+#include "rc.h"
 #include <sqlite3.h>
+#include <glog/logging.h>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
@@ -74,9 +76,15 @@ private:
 public:
 	analyzer(): db(NULL)
 	{
-		sqlite3_open("./ctp.db", &db);
-		sqlite3_exec(db, "PRAGMA journal_mode = WAL", NULL, NULL, NULL);
-		sqlite3_exec(db, "PRAGMA synchronous = NORMAL", NULL, NULL, NULL);
+		char sql[1024];
+		if (sqlite3_open(rc.dbfile, &db) == -1) {
+			LOG(FATAL) << "open " << rc.dbfile << " failed";
+			exit(EXIT_FAILURE);
+		}
+		snprintf(sql, sizeof(sql), "PRAGMA journal_mode = %s", rc.journal_mode);
+		sqlite3_exec(db, sql, NULL, NULL, NULL);
+		snprintf(sql, sizeof(sql), "PRAGMA synchronous = %s", rc.synchronous);
+		sqlite3_exec(db, sql, NULL, NULL, NULL);
 
 		char **dbresult;
 		int nrow, ncolumn;

@@ -13,3 +13,4 @@ log/
 3rdparty/
 build/
 *install/
+*run*/

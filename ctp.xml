@@ -1,4 +1,10 @@
 <conf>
+  <sqlite>
+    <dbfile>./ctp.db</dbfile>
+    <journal_mode>WAL</journal_mode>
+    <synchronous>NORMAL</synchronous>
+  </sqlite>
+
   <market>
     <market_addr>tcp://27.115.56.234:41213</market_addr>
     <broker_id>8050</broker_id>

@@ -1,6 +1,6 @@
 #include "rc.h"
-#include "market_if.hpp"
 #include "analyzer.hpp"
+#include "market_if.hpp"
 #include <glog/logging.h>
 #include <ctime>
 #include <vector>
@@ -10,8 +10,7 @@
 using namespace ctp;
 
 static int runflag = 1;
-static rc_t rc;
-static analyzer aly;
+static analyzer *aly;
 static std::vector<futures_tick> ticktab;
 static pthread_mutex_t tick_mutex;
 
@@ -24,7 +23,7 @@ void on_login_event(market_if *sender, void *udata)
 	// convert to real month [1 ~ 12]
 	int mon = tnow->tm_mon + 1;
 
-	std::list<futures_contract_base> tab = aly.get_contracts();
+	std::list<futures_contract_base> tab = aly->get_contracts();
 	for (auto iter = tab.begin(); iter != tab.end(); ++iter) {
 		// not clear how to deal with contracts which affected byseason
 		if (!iter->byseason)
@@ -57,7 +56,7 @@ void on_tick_event(market_if *sender, void *udata, futures_tick &tick)
 	pthread_mutex_unlock(&tick_mutex);
 }
 
-void run_analyzer()
+void* run_analyzer(void *)
 {
 	while (runflag) {
 		if (ticktab.size() == 0) {
@@ -66,10 +65,12 @@ void run_analyzer()
 		}
 
 		pthread_mutex_lock(&tick_mutex);
-		aly.add_ticks(ticktab.begin(), ticktab.end());
+		aly->add_ticks(ticktab.begin(), ticktab.end());
 		ticktab.clear();
 		pthread_mutex_unlock(&tick_mutex);
 	}
+
+	return NULL;
 }
 
 void signal_handler(int sig)
@@ -95,6 +96,11 @@ int main(int argc, char *argv[])
 	// set signals
 	signal(SIGINT, signal_handler);
 
+	// run analyzer
+	aly = new analyzer;
+	pthread_t aly_pthread;
+	pthread_create(&aly_pthread, NULL, run_analyzer, NULL);
+
 	// run market_if
 	market_if *mif = new market_if(rc.market_addr,
 			rc.broker_id, rc.username, rc.password);
@@ -104,10 +110,11 @@ int main(int argc, char *argv[])
 
 	// run tarder_if
 
-	// run analyzer
-	run_analyzer();
+	// wait aly
+	pthread_join(aly_pthread, NULL);
 
 	// fini
+	delete aly;
 	delete mif;
 	pthread_mutex_destroy(&tick_mutex);
 	google::ShutdownGoogleLogging();
