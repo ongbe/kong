@@ -1,6 +1,6 @@
 #include "rc.h"
 #include "analyzer.h"
-#include "market_if.hpp"
+#include "market_if.h"
 #include <glog/logging.h>
 #include <ctime>
 #include <vector>
