@@ -10,12 +10,13 @@ typedef struct __tick_base {
 } tick_t;
 
 typedef struct __bar_base {
-	time_t start_time;
+	time_t begin_time;
 	time_t end_time;
 
 	double open;
 	double close;
-	double high, low;
+	double high;
+	double low;
 	long volume;
 } bar_t;
 

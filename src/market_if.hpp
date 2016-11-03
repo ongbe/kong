@@ -213,6 +213,10 @@ public:
 		if (pDepthMarketData->Volume == pre_volume_iter->second)
 			return;
 
+		// reset pre volume in new trading days, should after 'skip tick'
+		if (pDepthMarketData->Volume == 0)
+			pre_volume_iter->second = 0;
+
 		// last time, ActionDay from DaLian is 24h earlier than real time at night
 		boost::posix_time::ptime time = boost::posix_time::ptime(
 				boost::gregorian::from_undelimited_string(pDepthMarketData->ActionDay),

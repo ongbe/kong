@@ -17,6 +17,21 @@ CREATE TABLE futures_tick(
 	open_interest BIGINT NOT NULL
 );
 
+DROP TABLE IF EXISTS futures_bar_min;
+CREATE TABLE futures_bar_min(
+	id            INTEGER PRIMARY KEY,
+	contract_code CHAR(6) NOT NULL,
+	trading_day   CHAR(10) NOT NULL,
+
+	begin_time    BIGINT NOT NULL,
+	end_time      BIGINT NOT NULL,
+	open          DOUBLE NOT NULL,
+	close         DOUBLE NOT NULL,
+	high          DOUBLE NOT NULL,
+	low           DOUBLE NOT NULL,
+	volume        BIGINT NOT NULL
+);
+
 DROP TABLE IF EXISTS futures_contract_base;
 CREATE TABLE futures_contract_base(
 	id          INTEGER PRIMARY KEY,
