@@ -170,29 +170,44 @@ void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarke
 	// get pre volume relative to this tick
 	auto pre_volume_iter = voltab.find(pDepthMarketData->InstrumentID);
 	if (pre_volume_iter == voltab.end())
-		pre_volume_iter = voltab.insert(std::make_pair(pDepthMarketData->InstrumentID, 0)).first;
+		pre_volume_iter = voltab.insert(std::make_pair(pDepthMarketData->InstrumentID, -1)).first;
 
 	// skip tick with no volume
 	if (pDepthMarketData->Volume == pre_volume_iter->second)
 		return;
 
-	// reset pre volume in new trading days, should after 'skip tick'
+	/*
+	* calculation of last volume
+	* 1) - init pre-volume with -1, means no pre-volume
+	* 2) - if day-volume == pre-volume, do nothing
+	* 3) - if day-volume == 0, then last-volume == 0
+	* 4) - if day-volume != 0 && pre-volume == -1, then last-volume == 0
+	* 5) - if day-volume != 0 && pre-volume != -1, then last-volume = day-volume - pre-volume
+	*/
+	long last_volume;
+
 	if (pDepthMarketData->Volume == 0)
-		pre_volume_iter->second = 0;
+		last_volume = 0;
+	else if (pre_volume_iter->second == -1)
+		last_volume = 0;
+	else
+		last_volume = pDepthMarketData->Volume - pre_volume_iter->second;
+
+	pre_volume_iter->second = pDepthMarketData->Volume;
 
 	// last time, ActionDay from DaLian is 24h earlier than real time at night
-	boost::posix_time::ptime time = boost::posix_time::ptime(
+	boost::posix_time::ptime remote_time = boost::posix_time::ptime(
 			boost::gregorian::from_undelimited_string(pDepthMarketData->ActionDay),
 			boost::posix_time::duration_from_string(pDepthMarketData->UpdateTime));
-	boost::posix_time::ptime pnow = boost::posix_time::second_clock::local_time();
-	if (time - pnow > boost::posix_time::time_duration(23, 0, 0))
-		time -= boost::posix_time::time_duration(24, 0, 0);
-	struct tm tnow = boost::posix_time::to_tm(pnow);
+	boost::posix_time::ptime local_time = boost::posix_time::second_clock::local_time();
+	if (remote_time - local_time > boost::posix_time::time_duration(23, 0, 0))
+		remote_time -= boost::posix_time::time_duration(24, 0, 0);
+	struct tm tm_remote_time = boost::posix_time::to_tm(remote_time);
 
 	// tick base
 	futures_tick tick;
-	tick.t.last_time = mktime(&tnow);
-	tick.t.last_volume = pDepthMarketData->Volume - pre_volume_iter->second;
+	tick.t.last_time = mktime(&tm_remote_time);
+	tick.t.last_volume = last_volume;
 	tick.t.last_price = pDepthMarketData->LastPrice;
 
 	// price & volume
@@ -206,8 +221,6 @@ void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarke
 	// code
 	memcpy(tick.contract_code, pDepthMarketData->InstrumentID, sizeof(tick.contract_code));
 	strncpy(tick.trading_day, pDepthMarketData->TradingDay, sizeof(tick.trading_day));
-
-	pre_volume_iter->second = pDepthMarketData->Volume;
 
 	if (tick_event)
 		tick_event(this, udata, tick);

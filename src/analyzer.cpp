@@ -132,7 +132,7 @@ void analyzer::add_tick(struct futures_tick &tick)
 		minbars.push_back(bar);
 		snprintf(sql, sizeof(sql), "INSERT INTO futures_bar_min(contract_code, trading_day,"
 				"begin_time, end_time, volume, open, close, high, low, avg, wavg)"
-				" VALUES('%s', '%s',  %ld, %ld,  %ld, %lf, %lf, %lf, %lf, %lf, %lf)",
+				" VALUES('%s', '%s',  %ld, %ld,  %ld, %lf, %lf, %lf, %lf, %.2lf, %.2lf)",
 				tick.contract_code, tick.trading_day,
 				bar.begin_time, bar.end_time,
 				bar.volume, bar.open, bar.close, bar.high, bar.low, bar.avg, bar.wavg);
