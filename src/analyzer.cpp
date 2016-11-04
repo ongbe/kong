@@ -61,21 +61,31 @@ namespace ctp {
 
 analyzer::analyzer(): db(NULL)
 {
+	// init sqlite
 	char sql[1024];
-	if (sqlite3_open(rc.dbfile, &db) == -1) {
-		LOG(FATAL) << "open " << rc.dbfile << " failed";
+
+	if (SQLITE_OK != sqlite3_open(rc.dbfile, &db)) {
+		LOG(FATAL) << sqlite3_errmsg(db);
 		exit(EXIT_FAILURE);
 	}
-	snprintf(sql, sizeof(sql), "PRAGMA journal_mode = %s", rc.journal_mode);
-	sqlite3_exec(db, sql, NULL, NULL, NULL);
-	snprintf(sql, sizeof(sql), "PRAGMA synchronous = %s", rc.synchronous);
-	sqlite3_exec(db, sql, NULL, NULL, NULL);
 
+	snprintf(sql, sizeof(sql), "PRAGMA journal_mode = %s", rc.journal_mode);
+	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
+		LOG(ERROR) << sqlite3_errmsg(db);
+
+	snprintf(sql, sizeof(sql), "PRAGMA synchronous = %s", rc.synchronous);
+	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
+		LOG(ERROR) << sqlite3_errmsg(db);
+
+	// query contracts
 	char **dbresult;
 	int nrow, ncolumn;
-	sqlite3_get_table(db, "SELECT code, cn_code, exchange, byseason,"
+	if (SQLITE_OK != sqlite3_get_table(db, "SELECT code, cn_code, exchange, byseason,"
 			"code_format, main_month FROM futures_contract_base WHERE active = 1",
-			&dbresult, &nrow, &ncolumn, NULL);
+			&dbresult, &nrow, &ncolumn, NULL)) {
+		LOG(FATAL) << sqlite3_errmsg(db);
+		exit(EXIT_FAILURE);
+	}
 
 	for (int i = 1; i < nrow; i++) {
 		futures_contract_base tra;
@@ -115,7 +125,8 @@ void analyzer::add_tick(struct futures_tick &tick)
 			tick.t.last_time, tick.t.last_volume, tick.t.last_price,
 			tick.sell_price, tick.sell_volume, tick.buy_price, tick.buy_volume,
 			tick.day_volume, tick.open_interest);
-	sqlite3_exec(db, sql, NULL, NULL, NULL);
+	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
+		LOG(ERROR) << sqlite3_errmsg(db);
 
 	// add tick to ts
 	auto iter = ts.find(tick.contract_code);
@@ -136,7 +147,8 @@ void analyzer::add_tick(struct futures_tick &tick)
 				tick.contract_code, tick.trading_day,
 				bar.begin_time, bar.end_time,
 				bar.volume, bar.open, bar.close, bar.high, bar.low, bar.avg, bar.wavg);
-		sqlite3_exec(db, sql, NULL, NULL, NULL);
+		if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
+			LOG(ERROR) << sqlite3_errmsg(db);
 	}
 }
 
