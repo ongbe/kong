@@ -167,34 +167,6 @@ void market_if::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecif
 ///深度行情通知
 void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-	// get pre volume relative to this tick
-	auto pre_volume_iter = voltab.find(pDepthMarketData->InstrumentID);
-	if (pre_volume_iter == voltab.end())
-		pre_volume_iter = voltab.insert(std::make_pair(pDepthMarketData->InstrumentID, -1)).first;
-
-	// skip tick with no volume
-	if (pDepthMarketData->Volume == pre_volume_iter->second)
-		return;
-
-	/*
-	* calculation of last volume
-	* 1) - init pre-volume with -1, means no pre-volume
-	* 2) - if day-volume == pre-volume, do nothing
-	* 3) - if day-volume == 0, then last-volume == 0
-	* 4) - if day-volume != 0 && pre-volume == -1, then last-volume == 0
-	* 5) - if day-volume != 0 && pre-volume != -1, then last-volume = day-volume - pre-volume
-	*/
-	long last_volume;
-
-	if (pDepthMarketData->Volume == 0)
-		last_volume = 0;
-	else if (pre_volume_iter->second == -1)
-		last_volume = 0;
-	else
-		last_volume = pDepthMarketData->Volume - pre_volume_iter->second;
-
-	pre_volume_iter->second = pDepthMarketData->Volume;
-
 	// last time, ActionDay from DaLian is 24h earlier than real time at night
 	boost::posix_time::ptime remote_time = boost::posix_time::ptime(
 			boost::gregorian::from_undelimited_string(pDepthMarketData->ActionDay),
@@ -208,7 +180,7 @@ void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarke
 	futures_tick tick;
 	memcpy(tick.contract_code, pDepthMarketData->InstrumentID, sizeof(tick.contract_code));
 	tick.last_time = mktime(&tm_remote_time);
-	tick.last_volume = last_volume;
+	tick.last_volume = 0;
 	tick.last_price = pDepthMarketData->LastPrice;
 	tick.sell_volume = pDepthMarketData->AskVolume1;
 	tick.sell_price = pDepthMarketData->AskPrice1;

@@ -20,7 +20,6 @@ private:
 	// market api, heap resources
 	CThostFtdcMdApi *api;
 	int api_reqid;
-	std::map<std::string, long> voltab;
 
 private:
 	// rc
