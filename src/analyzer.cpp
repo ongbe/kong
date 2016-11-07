@@ -8,6 +8,8 @@
 template <class I>
 bar_t mkbar(I first, I last)
 {
+	assert(first != last);
+
 	int index = 0;
 
 	// init bar with first tick
@@ -40,7 +42,8 @@ bar_t mkbar(I first, I last)
 	}
 
 	bar.avg /= index;
-	bar.wavg /= bar.volume;
+	if (bar.volume)
+		bar.wavg /= bar.volume;
 	return bar;
 }
 
