@@ -127,7 +127,8 @@ void analyzer::add_tick(struct futures_tick &tick)
 		snprintf(sql, sizeof(sql), "SELECT contract_code,"
 				"last_time, last_volume, last_price, sell_volume, sell_price, buy_volume, buy_price,"
 				"trading_day, day_volume, open_interest FROM futures_tick"
-				" WHERE last_time > %ld", tick.last_time - 86400 * 3);
+				" WHERE last_time > %ld AND contract_code = '%s'",
+				tick.last_time - 86400 * 3, tick.contract_code);
 		if (SQLITE_OK != sqlite3_get_table(db, sql, &dbresult, &nrow, &ncolumn, NULL)) {
 			LOG(FATAL) << sqlite3_errmsg(db);
 			exit(EXIT_FAILURE);
