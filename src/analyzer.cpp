@@ -5,28 +5,28 @@
 #include <cstdio>
 #include <cstdlib>
 
-template <class Iterator>
-bar_t mkbar(Iterator begin, Iterator end)
+template <class I>
+bar_t mkbar(I first, I last)
 {
 	int index = 0;
 
 	// init bar with first tick
 	bar_t bar;
-	bar.begin_time = begin->last_time;
-	bar.end_time = begin->last_time;
-	bar.open = begin->last_price;
-	bar.close = begin->last_price;
-	bar.high = begin->last_price;
-	bar.low = begin->last_price;
-	bar.avg = begin->last_price;
-	bar.wavg = begin->last_price * begin->last_volume;
-	bar.volume = begin->last_volume;
+	bar.begin_time = first->last_time;
+	bar.end_time = first->last_time;
+	bar.open = first->last_price;
+	bar.close = first->last_price;
+	bar.high = first->last_price;
+	bar.low = first->last_price;
+	bar.avg = first->last_price;
+	bar.wavg = first->last_price * first->last_volume;
+	bar.volume = first->last_volume;
 	index++;
 
 	// other ticks
-	Iterator iter = begin;
+	I iter = first;
 	++iter;
-	for (; iter != end; ++iter) {
+	for (; iter != last; ++iter) {
 		bar.end_time = iter->last_time;
 		bar.close = iter->last_price;
 		if (bar.high < iter->last_price)
@@ -44,17 +44,17 @@ bar_t mkbar(Iterator begin, Iterator end)
 	return bar;
 }
 
-template <class Iterator>
-Iterator find_tick_batch_end(Iterator begin, Iterator end, int minutes)
+template <class I>
+I find_tick_batch_end(I first, I last, int minutes)
 {
 	assert(minutes > 0);
 
-	for (Iterator iter = begin; iter != end; ++iter) {
-		if (iter->last_time / (60*minutes) > begin->last_time / (60*minutes))
+	for (I iter = first; iter != last; ++iter) {
+		if (iter->last_time / (60*minutes) > first->last_time / (60*minutes))
 			return iter;
 	}
 
-	return end;
+	return last;
 }
 
 namespace ctp {
@@ -118,35 +118,36 @@ void analyzer::add_tick(struct futures_tick &tick)
 	// insert tick into futures_tick
 	char sql[1024];
 	snprintf(sql, sizeof(sql), "INSERT INTO futures_tick"
-			"(contract_code, trading_day, last_time, last_volume, last_price,"
-			"sell_price, sell_volume, buy_price, buy_volume, day_volume, open_interest)"
-			" VALUES('%s', '%s',  %ld, %ld, %lf,  %lf, %ld, %lf, %ld,  %ld, %ld)",
-			tick.contract_code, tick.trading_day,
-			tick.t.last_time, tick.t.last_volume, tick.t.last_price,
-			tick.sell_price, tick.sell_volume, tick.buy_price, tick.buy_volume,
-			tick.day_volume, tick.open_interest);
+			"(contract_code, last_time, last_volume, last_price,"
+			"sell_volume, sell_price, buy_volume, buy_price,"
+			"trading_day, day_volume, open_interest)"
+			" VALUES('%s',  %ld, %ld, %lf,  %ld, %lf, %ld, %lf,  '%s', %ld, %ld)",
+			tick.contract_code,
+			tick.last_time, tick.last_volume, tick.last_price,
+			tick.sell_volume, tick.sell_price, tick.buy_volume, tick.buy_price,
+			tick.ex.trading_day, tick.ex.day_volume, tick.ex.open_interest);
 	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 		LOG(ERROR) << sqlite3_errmsg(db);
 
 	// add tick to ts
 	auto iter = ts.find(tick.contract_code);
 	if (iter == ts.end())
-		iter = ts.insert(std::make_pair(tick.contract_code, std::list<tick_t>())).first;
+		iter = ts.insert(std::make_pair(tick.contract_code, std::list<futures_tick>())).first;
 	auto &ticktab = iter->second;
-	ticktab.push_back(tick.t);
+	ticktab.push_back(tick);
 
 	// insert bar into futures_bar_min & minbars
-	if (tick.t.last_time / 60 > ticktab.begin()->last_time / 60) {
+	if (tick.last_time / 60 > ticktab.begin()->last_time / 60) {
 		auto cur = find_tick_batch_end(ticktab.begin(), ticktab.end(), 1);
 		bar_t bar = mkbar(ticktab.begin(), cur);
 		ticktab.erase(ticktab.begin(), cur);
 		minbars.push_back(bar);
-		snprintf(sql, sizeof(sql), "INSERT INTO futures_bar_min(contract_code, trading_day,"
+		snprintf(sql, sizeof(sql), "INSERT INTO futures_bar_min(contract_code,"
 				"begin_time, end_time, volume, open, close, high, low, avg, wavg)"
-				" VALUES('%s', '%s',  %ld, %ld,  %ld, %lf, %lf, %lf, %lf, %.2lf, %.2lf)",
-				tick.contract_code, tick.trading_day,
-				bar.begin_time, bar.end_time,
-				bar.volume, bar.open, bar.close, bar.high, bar.low, bar.avg, bar.wavg);
+				" VALUES('%s',  %ld, %ld, %ld,  %lf, %lf, %lf, %lf, %.2lf, %.2lf)",
+				tick.contract_code,
+				bar.begin_time, bar.end_time, bar.volume,
+				bar.open, bar.close, bar.high, bar.low, bar.avg, bar.wavg);
 		if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 			LOG(ERROR) << sqlite3_errmsg(db);
 	}

@@ -2,17 +2,16 @@ DROP TABLE IF EXISTS futures_tick;
 CREATE TABLE futures_tick(
 	id            INTEGER PRIMARY KEY,
 	contract_code CHAR(6) NOT NULL,
-	trading_day   CHAR(10) NOT NULL,
 
 	last_time     BIGINT NOT NULL,
 	last_volume   BIGINT NOT NULL,
 	last_price    DOUBLE NOT NULL,
-
 	sell_volume   BIGINT NOT NULL,
 	sell_price    DOUBLE NOT NULL,
 	buy_volume    BIGINT NOT NULL,
 	buy_price     DOUBLE NOT NULL,
 
+	trading_day   CHAR(10) NOT NULL,
 	day_volume    BIGINT NOT NULL,
 	open_interest BIGINT NOT NULL
 );
@@ -21,7 +20,6 @@ DROP TABLE IF EXISTS futures_bar_min;
 CREATE TABLE futures_bar_min(
 	id            INTEGER PRIMARY KEY,
 	contract_code CHAR(6) NOT NULL,
-	trading_day   CHAR(10) NOT NULL,
 
 	begin_time    BIGINT NOT NULL,
 	end_time      BIGINT NOT NULL,

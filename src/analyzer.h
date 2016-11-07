@@ -14,7 +14,7 @@ private:
 	sqlite3 *db;
 	std::list<futures_contract_base> contracts;
 	std::list<bar_t> minbars;
-	std::map<std::string, std::list<tick_t>> ts;
+	std::map<std::string, std::list<futures_tick>> ts;
 
 public:
 	analyzer();
@@ -25,10 +25,10 @@ public:
 
 	void add_tick(struct futures_tick &tick);
 
-	template <class Iterator>
-	void add_ticks(Iterator begin, Iterator end)
+	template <class I>
+	void add_ticks(I first, I last)
 	{
-		for (auto iter = begin; iter != end; ++iter)
+		for (auto iter = first; iter != last; ++iter)
 			add_tick(*iter);
 	}
 };

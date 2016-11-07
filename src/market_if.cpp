@@ -206,21 +206,19 @@ void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarke
 
 	// tick base
 	futures_tick tick;
-	tick.t.last_time = mktime(&tm_remote_time);
-	tick.t.last_volume = last_volume;
-	tick.t.last_price = pDepthMarketData->LastPrice;
-
-	// price & volume
+	memcpy(tick.contract_code, pDepthMarketData->InstrumentID, sizeof(tick.contract_code));
+	tick.last_time = mktime(&tm_remote_time);
+	tick.last_volume = last_volume;
+	tick.last_price = pDepthMarketData->LastPrice;
 	tick.sell_volume = pDepthMarketData->AskVolume1;
 	tick.sell_price = pDepthMarketData->AskPrice1;
 	tick.buy_volume = pDepthMarketData->BidVolume1;
 	tick.buy_price = pDepthMarketData->BidPrice1;
-	tick.day_volume = pDepthMarketData->Volume;
-	tick.open_interest = pDepthMarketData->OpenInterest;
 
-	// code
-	memcpy(tick.contract_code, pDepthMarketData->InstrumentID, sizeof(tick.contract_code));
-	strncpy(tick.trading_day, pDepthMarketData->TradingDay, sizeof(tick.trading_day));
+	// extra data
+	strncpy(tick.ex.trading_day, pDepthMarketData->TradingDay, sizeof(tick.ex.trading_day));
+	tick.ex.day_volume = pDepthMarketData->Volume;
+	tick.ex.open_interest = pDepthMarketData->OpenInterest;
 
 	if (tick_event)
 		tick_event(this, udata, tick);
