@@ -13,7 +13,7 @@ static std::vector<futures_tick> ticktab;
 static pthread_mutex_t tick_mutex;
 
 static int runflag = 1;
-static analyzer *aly;
+static yx::analyzer *aly;
 
 void on_login_event(market_if *sender, void *udata)
 {
@@ -98,7 +98,7 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&tick_mutex, NULL);
 
 	// run analyzer
-	aly = new analyzer;
+	aly = new yx::analyzer;
 	pthread_t aly_pthread;
 	pthread_create(&aly_pthread, NULL, run_analyzer, NULL);
 

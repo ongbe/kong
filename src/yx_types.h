@@ -1,5 +1,5 @@
-#ifndef _CTP_TYPES_H
-#define _CTP_TYPES_H
+#ifndef _YX_TYPES_H
+#define _YX_TYPES_H
 
 #include <time.h>
 
@@ -25,6 +25,8 @@ typedef struct __bar_base {
 	double low;
 	double avg;
 	double wavg;
+
+	int merge_count;
 } bar_t;
 
 struct tick_bar_extra {

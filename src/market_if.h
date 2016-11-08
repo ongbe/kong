@@ -2,7 +2,7 @@
 #define _MARKET_IF_H
 
 #include "ThostFtdcMdApi.h"
-#include "ctp_types.h"
+#include "yx_types.h"
 #include <map>
 #include <string>
 

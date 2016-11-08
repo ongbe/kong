@@ -5,50 +5,10 @@
 #include <cstdio>
 #include <cstdlib>
 
-template <class I>
-bar_t mkbar(I first, I last)
-{
-	assert(first != last);
-
-	int index = 0;
-
-	// init bar with first tick
-	bar_t bar;
-	bar.begin_time = first->last_time;
-	bar.end_time = first->last_time;
-	bar.open = first->last_price;
-	bar.close = first->last_price;
-	bar.high = first->last_price;
-	bar.low = first->last_price;
-	bar.avg = first->last_price;
-	bar.wavg = first->last_price * first->last_volume;
-	bar.volume = first->last_volume;
-	index++;
-
-	// other ticks
-	I iter = first;
-	++iter;
-	for (; iter != last; ++iter) {
-		bar.end_time = iter->last_time;
-		bar.close = iter->last_price;
-		if (bar.high < iter->last_price)
-			bar.high = iter->last_price;
-		if (bar.low > iter->last_price)
-			bar.low = iter->last_price;
-		bar.avg += iter->last_price;
-		bar.wavg += iter->last_price * iter->last_volume;
-		bar.volume += iter->last_volume;
-		index++;
-	}
-
-	bar.avg /= index;
-	if (bar.volume)
-		bar.wavg /= bar.volume;
-	return bar;
-}
+namespace yx {
 
 template <class I>
-I find_tick_batch_end(I first, I last, int minutes)
+I find_tick_batch_end(const I &first, const I &last, int minutes)
 {
 	assert(minutes > 0);
 
@@ -59,8 +19,6 @@ I find_tick_batch_end(I first, I last, int minutes)
 
 	return last;
 }
-
-namespace ctp {
 
 analyzer::analyzer(): db(NULL)
 {
@@ -130,7 +88,7 @@ void analyzer::add_tick(struct futures_tick &tick)
 		snprintf(sql, sizeof(sql), "SELECT contract_code,"
 				"last_time, last_volume, last_price, sell_volume, sell_price, buy_volume, buy_price,"
 				"trading_day, day_volume, open_interest FROM futures_tick"
-				" WHERE last_time > %ld AND contract_code = '%s'",
+				" WHERE last_time > %ld AND contract_code = '%s' limit 1",
 				tick.last_time - 86400 * 3, tick.contract_code);
 		if (SQLITE_OK != sqlite3_get_table(db, sql, &dbresult, &nrow, &ncolumn, NULL)) {
 			LOG(FATAL) << sqlite3_errmsg(db);
@@ -195,17 +153,17 @@ void analyzer::add_tick(struct futures_tick &tick)
 	// insert bar into futures_bar_min & minbars
 	if (tick.last_time / 60 > ticktab.begin()->last_time / 60) {
 		auto cur = find_tick_batch_end(ticktab.begin(), ticktab.end(), 1);
-		bar_t bar = mkbar(ticktab.begin(), cur);
-		ticktab.erase(ticktab.begin(), cur);
+		xbar bar = xbar(ticktab.begin(), cur);
 		minbars.push_back(bar);
+		ticktab.erase(ticktab.begin(), cur);
 
-		strftime(iso_time, sizeof(iso_time), "%Y-%m-%d %H:%M:%S", localtime(&bar.begin_time));
+		strftime(iso_time, sizeof(iso_time), "%Y-%m-%d %H:%M:%S", localtime(&bar.raw().begin_time));
 		snprintf(sql, sizeof(sql), "INSERT INTO futures_bar_min(contract_code, begin_iso_time,"
 				"begin_time, end_time, volume, open, close, high, low, avg, wavg)"
 				" VALUES('%s', '%s',  %ld, %ld, %ld,  %lf, %lf, %lf, %lf, %.2lf, %.2lf)",
 				tick.contract_code, iso_time,
-				bar.begin_time, bar.end_time, bar.volume,
-				bar.open, bar.close, bar.high, bar.low, bar.avg, bar.wavg);
+				bar.raw().begin_time, bar.raw().end_time, bar.raw().volume,
+				bar.raw().open, bar.raw().close, bar.raw().high, bar.raw().low, bar.raw().avg, bar.raw().wavg);
 		if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 			LOG(ERROR) << sqlite3_errmsg(db);
 	}

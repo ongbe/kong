@@ -1,19 +1,20 @@
 #ifndef _ANALYZER_H
 #define _ANALYZER_H
 
-#include "ctp_types.h"
+#include "yx_types.h"
+#include "yx_bar.hpp"
 #include <sqlite3.h>
 #include <list>
 #include <map>
 #include <string>
 
-namespace ctp {
+namespace yx {
 
 class analyzer {
 private:
 	sqlite3 *db;
 	std::list<futures_contract_base> contracts;
-	std::list<bar_t> minbars;
+	std::list<xbar> minbars;
 	std::map<std::string, std::list<futures_tick>> ts;
 
 public:
