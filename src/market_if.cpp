@@ -174,8 +174,8 @@ void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarke
 			boost::posix_time::duration_from_string(pDepthMarketData->UpdateTime));
 	boost::posix_time::ptime china_time = boost::posix_time::second_clock::universal_time()
 		+ boost::posix_time::time_duration(8, 0, 0);
-	if (remote_time - china_time > boost::posix_time::time_duration(18, 0, 0))
-		remote_time = boost::posix_time::ptime(china_time.date(), remote_time.time_of_day());
+	while (remote_time - china_time > boost::posix_time::time_duration(18, 0, 0))
+		remote_time -= boost::posix_time::time_duration(24, 0, 0);
 	struct tm tm_remote_time = boost::posix_time::to_tm(remote_time);
 
 	// tick base
