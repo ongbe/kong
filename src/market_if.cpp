@@ -167,14 +167,15 @@ void market_if::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecif
 ///深度行情通知
 void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-	// fix error data from ctp
-	// last time, ActionDay from DaLian is 24h or 3*24h earlier than real time at settlement & night
+	// FIXME: fix last time
+	//        even can't resolve recieve last friday night tick's time
+	//        in monday moning when restart ctp
 	boost::posix_time::ptime remote_time = boost::posix_time::ptime(
-			boost::gregorian::from_undelimited_string(pDepthMarketData->ActionDay),
+			boost::gregorian::from_undelimited_string(pDepthMarketData->TradingDay),
 			boost::posix_time::duration_from_string(pDepthMarketData->UpdateTime));
 	boost::posix_time::ptime china_time = boost::posix_time::second_clock::universal_time()
 		+ boost::posix_time::time_duration(8, 0, 0);
-	while (remote_time - china_time > boost::posix_time::time_duration(18, 0, 0))
+	if (remote_time - china_time > boost::posix_time::time_duration(12, 0, 0))
 		remote_time -= boost::posix_time::time_duration(24, 0, 0);
 	struct tm tm_remote_time = boost::posix_time::to_tm(remote_time);
 
