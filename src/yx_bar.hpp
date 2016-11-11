@@ -6,14 +6,14 @@
 
 namespace yx {
 
-template <class T, class Impl>
+template <class T, class Defs>
 class bar_base {
 public:
 	typedef T value_type;
-	typedef typename Impl::tick_type tick_type;
-	typedef typename Impl::bar_rep_type bar_rep_type;
+	typedef typename Defs::tick_type tick_type;
+	typedef typename Defs::bar_rep_type bar_rep_type;
 
-	explicit bar_base(const tick_type &rhs) : _bar(Impl::get_bar_from_tick(rhs)) {}
+	explicit bar_base(const tick_type &rhs) : _bar(static_cast<T*>(this)->get_bar_from_tick(rhs)) {}
 	bar_base(const bar_rep_type &rhs) : _bar(rhs) {}
 	template <class InputIterator>
 	bar_base(const InputIterator first, const InputIterator last)
@@ -22,26 +22,26 @@ public:
 		InputIterator iter = first;
 		++iter;
 		for (; iter != last; ++iter)
-			v._bar = Impl::merge(v._bar, value_type(*iter)._bar);
+			v._bar = static_cast<T*>(this)->merge(v._bar, value_type(*iter)._bar);
 
 		_bar = v._bar;
 	}
 
 	value_type operator+(value_type &v)
 	{
-		return value_type(Impl::merge(_bar, v._bar));
+		return value_type(static_cast<T*>(this)->merge(_bar, v._bar));
 	}
 
-	value_type operator+=(value_type &v)
+	value_type& operator+=(value_type &v)
 	{
-		_bar = Impl::merge(_bar, v._bar);
-		return value_type(_bar);
+		_bar = static_cast<T*>(this)->merge(_bar, v._bar);
+		return static_cast<T>(*this);
 	}
 
-	value_type operator+=(value_type &&v)
+	value_type& operator+=(value_type &&v)
 	{
-		_bar = Impl::merge(_bar, v._bar);
-		return value_type(_bar);
+		_bar = static_cast<T*>(this)->merge(_bar, v._bar);
+		return static_cast<T>(*this);
 	}
 
 	const bar_rep_type& raw()
@@ -53,14 +53,26 @@ protected:
 	bar_rep_type _bar;
 };
 
-struct xbar_impl {
-	typedef xbar_impl self_type;
+struct xbar_defs {
 	typedef tick_t    tick_type;
 	typedef bar_t     bar_rep_type;
+};
+
+class xbar : public bar_base<xbar, xbar_defs> {
+public:
+	typedef typename xbar_defs::tick_type tick_type;
+	typedef typename xbar_defs::bar_rep_type bar_rep_type;
+
+	explicit xbar(const tick_type &rhs) : bar_base(rhs) {}
+	template <class InputIterator>
+	xbar(const InputIterator first, const InputIterator last)
+		: bar_base(first, last) {}
+	xbar(const bar_rep_type &rhs) : bar_base(rhs) {}
 
 	static bar_rep_type get_bar_from_tick(const tick_type &tick)
 	{
 		bar_rep_type bar;
+
 		bar.begin_time = tick.last_time;
 		bar.end_time = tick.last_time;
 
@@ -90,18 +102,6 @@ struct xbar_impl {
 
 		return bar;
 	}
-};
-
-class xbar : public bar_base<xbar, xbar_impl> {
-public:
-	typedef typename xbar_impl::tick_type tick_type;
-	typedef typename xbar_impl::bar_rep_type bar_rep_type;
-
-	explicit xbar(const tick_type &rhs) : bar_base(rhs) {}
-	template <class InputIterator>
-	xbar(const InputIterator first, const InputIterator last)
-		: bar_base(first, last) {}
-	xbar(const bar_rep_type &rhs) : bar_base(rhs) {}
 };
 
 }
