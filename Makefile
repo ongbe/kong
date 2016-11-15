@@ -14,7 +14,7 @@ LDFLAGS = -lpthread -lboost_date_time -lsqlite3 -lglog $(LIBRARY_PATH)/*.so
 TARGET=ctp
 all: $(TARGET)
 
-ctp: src/main.o src/rc.o src/analyzer.o src/market_if.o
+ctp: src/main.o src/conf.o src/analyzer.o src/market_if.o
 	g++ $(CPPFLAGS) -o $@ $^ $(LDFLAGS)
 
 clean:
@@ -31,12 +31,9 @@ install: $(TARGET)
 
 .PHONY: all clean install
 
-analyzer.o: src/analyzer.cpp src/analyzer.h src/yx_types.h src/yx_bar.hpp \
- src/rc.h
-main.o: src/main.cpp src/rc.h src/analyzer.h src/yx_types.h \
- src/yx_bar.hpp src/market_if.h include/ThostFtdcMdApi.h \
- include/ThostFtdcUserApiStruct.h include/ThostFtdcUserApiDataType.h
-market_if.o: src/market_if.cpp src/market_if.h src/yx_types.h \
- include/ThostFtdcMdApi.h include/ThostFtdcUserApiStruct.h \
- include/ThostFtdcUserApiDataType.h
-rc.o: src/rc.cpp src/rc.h
+src/analyzer.o: src/analyzer.cpp src/analyzer.h src/yx_types.h src/yx_bar.hpp \
+ src/conf.h
+src/conf.o: src/conf.cpp src/conf.h
+src/main.o: src/main.cpp src/conf.h src/analyzer.h src/yx_types.h \
+ src/yx_bar.hpp src/market_if.h
+src/market_if.o: src/market_if.cpp src/market_if.h src/yx_types.h

@@ -1,5 +1,5 @@
 #include "analyzer.h"
-#include "rc.h"
+#include "conf.h"
 #include <glog/logging.h>
 #include <cassert>
 #include <cstdio>
@@ -25,16 +25,16 @@ analyzer::analyzer(): db(NULL)
 	// init sqlite
 	char sql[1024];
 
-	if (SQLITE_OK != sqlite3_open(rc.dbfile, &db)) {
+	if (SQLITE_OK != sqlite3_open(conf.dbfile, &db)) {
 		LOG(FATAL) << sqlite3_errmsg(db);
 		exit(EXIT_FAILURE);
 	}
 
-	snprintf(sql, sizeof(sql), "PRAGMA journal_mode = %s", rc.journal_mode);
+	snprintf(sql, sizeof(sql), "PRAGMA journal_mode = %s", conf.journal_mode);
 	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 		LOG(ERROR) << sqlite3_errmsg(db);
 
-	snprintf(sql, sizeof(sql), "PRAGMA synchronous = %s", rc.synchronous);
+	snprintf(sql, sizeof(sql), "PRAGMA synchronous = %s", conf.synchronous);
 	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 		LOG(ERROR) << sqlite3_errmsg(db);
 

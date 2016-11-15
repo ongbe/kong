@@ -1,4 +1,4 @@
-#include "rc.h"
+#include "conf.h"
 #include "analyzer.h"
 #include "market_if.h"
 #include <glog/logging.h>
@@ -88,8 +88,8 @@ int main(int argc, char *argv[])
 	FLAGS_colorlogtostderr = true;
 	google::InitGoogleLogging(argv[0]);
 
-	// init rc
-	rc_from_file(&rc, "./ctp.xml");
+	// init conf
+	conf_from_file(&conf, "./ctp.xml");
 
 	// set signals
 	signal(SIGINT, signal_handler);
@@ -103,8 +103,8 @@ int main(int argc, char *argv[])
 	pthread_create(&aly_pthread, NULL, run_analyzer, NULL);
 
 	// run market_if
-	market_if *mif = new market_if(rc.market_addr,
-			rc.broker_id, rc.username, rc.password);
+	market_if *mif = new market_if(conf.market_addr,
+			conf.broker_id, conf.username, conf.password);
 	mif->login_event = on_login_event;
 	mif->tick_event = on_tick_event;
 	mif->run();
