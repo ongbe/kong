@@ -3,10 +3,10 @@
 
 #include "yx_types.h"
 #include "yx_bar.hpp"
-#include <sqlite3.h>
+#include <string>
 #include <list>
 #include <map>
-#include <string>
+#include <sqlite3.h>
 
 namespace yx {
 

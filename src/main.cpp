@@ -1,12 +1,12 @@
 #include "conf.h"
 #include "analyzer.h"
 #include "market_if.h"
-#include <glog/logging.h>
+#include <signal.h>
+#include <pthread.h>
 #include <ctime>
 #include <vector>
 #include <boost/algorithm/string.hpp>
-#include <pthread.h>
-#include <signal.h>
+#include <glog/logging.h>
 using namespace ctp;
 
 static std::vector<futures_tick> ticktab;

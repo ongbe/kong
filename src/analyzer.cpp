@@ -1,9 +1,9 @@
 #include "analyzer.h"
 #include "conf.h"
-#include <glog/logging.h>
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
+#include <glog/logging.h>
 
 namespace yx {
 

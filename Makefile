@@ -7,29 +7,27 @@ INCLUDE_PATH?=include
 LIBRARY_PATH?=lib
 BINARY_PATH?=bin
 
-CPPFLAGS = -Wall -Werror -O2 -std=c++11 -I$(INCLUDE_PATH) -g
+CPPFLAGS = -Wall -Werror -std=c++11 -I$(INCLUDE_PATH)
 LDFLAGS = -lpthread -lboost_date_time -lsqlite3 -lglog $(LIBRARY_PATH)/*.so
 
-# target
-TARGET=ctp
-all: $(TARGET)
-
-ctp: src/main.o src/conf.o src/analyzer.o src/market_if.o
-	g++ $(CPPFLAGS) -o $@ $^ $(LDFLAGS)
+all: ctp
 
 clean:
 	rm -f src/*.o
-	rm -f $(TARGET)
+	rm -f ctp
 
-install: $(TARGET)
+install: all
 	mkdir -p $(PREFIX)
 	mkdir -p $(PREFIX)/lib
 	mkdir -p $(PREFIX)/log
-	install -m 755 $(TARGET)       $(PREFIX)
-	install -m 755 lib/*           $(PREFIX)/lib
+	install -m 755 ctp $(PREFIX)
+	install -m 755 lib/* $(PREFIX)/lib
 	install -m 644 ctp.sql ctp.xml $(PREFIX)
 
 .PHONY: all clean install
+
+ctp: src/main.o src/conf.o src/analyzer.o src/market_if.o
+	g++ $(CPPFLAGS) -o $@ $^ $(LDFLAGS)
 
 src/analyzer.o: src/analyzer.cpp src/analyzer.h src/yx_types.h src/yx_bar.hpp \
  src/conf.h
