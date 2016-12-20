@@ -1,8 +1,8 @@
 #ifndef _ANALYZER_H
 #define _ANALYZER_H
 
-#include "yx_types.h"
-#include "yx_bar.hpp"
+#include "yx/types.h"
+#include "yx/xbar.hpp"
 #include <string>
 #include <list>
 #include <map>

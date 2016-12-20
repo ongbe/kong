@@ -7,7 +7,7 @@ INCLUDE_PATH?=include
 LIBRARY_PATH?=lib
 BINARY_PATH?=bin
 
-CPPFLAGS = -Wall -Werror -std=c++11 -I$(INCLUDE_PATH)
+CPPFLAGS = -Wall -Werror -std=c++11 -I$(INCLUDE_PATH) -Isrc
 LDFLAGS = -lpthread -lboost_date_time -lsqlite3 -lglog $(LIBRARY_PATH)/*.so
 
 all: ctp
@@ -29,9 +29,9 @@ install: all
 ctp: src/main.o src/conf.o src/analyzer.o src/market_if.o
 	g++ $(CPPFLAGS) -o $@ $^ $(LDFLAGS)
 
-src/analyzer.o: src/analyzer.cpp src/analyzer.h src/yx_types.h src/yx_bar.hpp \
- src/conf.h
-src/conf.o: src/conf.cpp src/conf.h
-src/main.o: src/main.cpp src/conf.h src/analyzer.h src/yx_types.h \
- src/yx_bar.hpp src/market_if.h
-src/market_if.o: src/market_if.cpp src/market_if.h src/yx_types.h
+src/nalyzer.o: src/analyzer.cpp src/analyzer.h src/yx/types.h \
+ src/yx/xbar.hpp src/yx/types.h src/yx/bar_base.hpp src/conf.h
+src/onf.o: src/conf.cpp src/conf.h
+src/ain.o: src/main.cpp src/conf.h src/analyzer.h src/yx/types.h \
+ src/yx/xbar.hpp src/yx/types.h src/yx/bar_base.hpp src/market_if.h
+src/arket_if.o: src/market_if.cpp src/market_if.h src/yx/types.h

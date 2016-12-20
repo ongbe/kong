@@ -153,7 +153,7 @@ void analyzer::add_tick(struct futures_tick &tick)
 	// insert bar into futures_bar_min & minbars
 	if (tick.last_time / 60 > ticktab.begin()->last_time / 60) {
 		auto cur = find_tick_batch_end(ticktab.begin(), ticktab.end(), 1);
-		xbar bar = xbar(ticktab.begin(), cur);
+		xbar bar = xbar(ticks_to_bar(ticktab.begin(), cur));
 		minbars.push_back(bar);
 		ticktab.erase(ticktab.begin(), cur);
 

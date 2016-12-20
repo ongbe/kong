@@ -1,7 +1,7 @@
 #ifndef _MARKET_IF_H
 #define _MARKET_IF_H
 
-#include "yx_types.h"
+#include "yx/types.h"
 #include <ThostFtdcMdApi.h>
 
 namespace ctp {
