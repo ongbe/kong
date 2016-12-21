@@ -18,6 +18,11 @@ public:
 	{
 		return fst + snd;
 	}
+
+	static const value_type& value(const T &tp)
+	{
+		return tp.value;
+	}
 };
 
 template <typename T,
@@ -28,7 +33,7 @@ public:
 	typedef bar_base<T, Policy, Traits> self_type;
 	typedef typename Traits::value_type value_type;
 
-	bar_base(const value_type &rhs) : __vbar(rhs) {}
+	bar_base(const T &rhs) : __vbar(Policy::value(rhs)) {}
 	template <class InputIterator>
 	bar_base(const InputIterator first, const InputIterator last)
 	{
@@ -37,18 +42,18 @@ public:
 		InputIterator iter = first;
 		++iter;
 		for (; iter != last; ++iter)
-			__vbar = Policy::merge(__vbar, *iter);
+			__vbar = Policy::merge(__vbar, Policy::value(*iter));
 	}
 
 public:
-	self_type operator+(T const &v)
+	self_type operator+(T const &tp)
 	{
-		return self_type(Policy::merge(__vbar, v));
+		return self_type(Policy::merge(__vbar, Policy::value(tp)));
 	}
 
-	self_type& operator+=(T const &v)
+	self_type& operator+=(T const &tp)
 	{
-		__vbar = Policy::merge(__vbar, v);
+		__vbar = Policy::merge(__vbar, Policy::value(tp));
 		return *this;
 	}
 

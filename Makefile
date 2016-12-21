@@ -29,9 +29,9 @@ install: all
 ctp: src/main.o src/conf.o src/analyzer.o src/market_if.o
 	g++ $(CPPFLAGS) -o $@ $^ $(LDFLAGS)
 
-src/nalyzer.o: src/analyzer.cpp src/analyzer.h src/yx/types.h \
+src/analyzer.o: src/analyzer.cpp src/analyzer.h src/yx/types.h \
  src/yx/xbar.hpp src/yx/types.h src/yx/bar_base.hpp src/conf.h
-src/onf.o: src/conf.cpp src/conf.h
-src/ain.o: src/main.cpp src/conf.h src/analyzer.h src/yx/types.h \
+src/conf.o: src/conf.cpp src/conf.h
+src/main.o: src/main.cpp src/conf.h src/analyzer.h src/yx/types.h \
  src/yx/xbar.hpp src/yx/types.h src/yx/bar_base.hpp src/market_if.h
-src/arket_if.o: src/market_if.cpp src/market_if.h src/yx/types.h
+src/market_if.o: src/market_if.cpp src/market_if.h src/yx/types.h

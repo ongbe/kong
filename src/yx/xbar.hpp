@@ -35,6 +35,11 @@ public:
 
 		return bar;
 	}
+
+	static const bar_t& value(const bar_t &tp)
+	{
+		return tp;
+	}
 };
 
 typedef bar_base<bar_t> xbar;
