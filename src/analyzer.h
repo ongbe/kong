@@ -2,7 +2,7 @@
 #define _ANALYZER_H
 
 #include "quote/contract.h"
-#include "quote/quote.h"
+#include "quote/candlestick.h"
 #include "quote/tick.h"
 #include <string>
 #include <list>
@@ -15,7 +15,7 @@ class analyzer {
 private:
 	sqlite3 *db;
 	std::list<contract> contracts;
-	std::list<quote> quotes;
+	std::list<candlestick> candles;
 	std::map<std::string, std::list<tick_t>> ts;
 
 public:

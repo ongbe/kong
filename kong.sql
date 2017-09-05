@@ -1,6 +1,6 @@
 -- ctp.sql
 
-CREATE TABLE IF NOT EXISTS quote(
+CREATE TABLE IF NOT EXISTS candlestick(
 	id            INTEGER PRIMARY KEY,
 	symbol        CHAR(16) NOT NULL,
 	begin_time    BIGINT NOT NULL,
@@ -52,16 +52,16 @@ INSERT INTO contract(name, symbol, exchange, byseason, active, symbol_fmt, main_
 ("PTA",  "TA", "郑州商品交易所", 1, 1, "Ymm",  "1 5 9"),
 ("动煤", "ZC", "郑州商品交易所", 1, 1, "Ymm",  "1 5 9");
 
-DROP VIEW IF EXISTS v_quote_min;
-CREATE VIEW v_quote_min AS
+DROP VIEW IF EXISTS v_candlestick_min;
+CREATE VIEW v_candlestick_min AS
 	SELECT symbol,
 		datetime(begin_time, 'unixepoch', 'localtime') btime,
 		datetime(end_time, 'unixepoch', 'localtime') etime,
 		open, close, high, low, avg, volume, open_interest
-	FROM quote;
+	FROM candlestick;
 
-DROP VIEW IF EXISTS v_quote_quarter;
-CREATE VIEW v_quote_quarter AS
+DROP VIEW IF EXISTS v_candlestick_quarter;
+CREATE VIEW v_candlestick_quarter AS
 	SELECT a.symbol,
 		datetime(a.begin_time, 'unixepoch', 'localtime') btime,
 		datetime(a.end_time, 'unixepoch', 'localtime') etime,
@@ -70,9 +70,9 @@ CREATE VIEW v_quote_quarter AS
 	(SELECT symbol, min(begin_time) begin_time, max(end_time) end_time,
 	max(high) high, min(low) low, round(sum(volume*avg)/sum(volume), 2) avg,
 	sum(volume) volume
-	FROM quote
+	FROM candlestick
 	GROUP BY symbol, begin_time / 900) as a
-	LEFT JOIN quote b
+	LEFT JOIN candlestick b
 	ON a.symbol = b.symbol AND a.begin_time = b.begin_time
-	LEFT JOIN quote c
+	LEFT JOIN candlestick c
 	ON a.symbol = c.symbol AND a.end_time = c.end_time;

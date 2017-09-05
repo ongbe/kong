@@ -107,19 +107,19 @@ void analyzer::add_tick(tick_t &tick)
 
 	// insert bar into minute_detail & minbars
 	char sql[1024];
-	struct quote quot;
+	struct candlestick candle;
 	if (tick.last_time / 60 > ticktab.begin()->last_time / 60) {
 		auto cur = find_tick_batch_end(ticktab.begin(), ticktab.end(), 1);
-		ticks_to_quote(ticktab.begin(), cur, &quot);
-		quotes.push_back(quot);
+		ticks_to_candlestick(ticktab.begin(), cur, &candle);
+		candles.push_back(candle);
 		ticktab.erase(ticktab.begin(), cur);
 
-		snprintf(sql, sizeof(sql), "INSERT INTO quote(symbol, begin_time, end_time,"
+		snprintf(sql, sizeof(sql), "INSERT INTO candlestick(symbol, begin_time, end_time,"
 			 "open, close, high, low, avg, volume, open_interest)"
 			 " VALUES('%s', %ld, %ld, %lf, %lf, %lf, %lf, %.2lf, %ld, %ld)",
-			 tick.symbol, quot.begin_time, quot.end_time,
-			 quot.open, quot.close, quot.high, quot.low, quot.avg,
-			 quot.volume, quot.open_interest);
+			 tick.symbol, candle.begin_time, candle.end_time,
+			 candle.open, candle.close, candle.high, candle.low, candle.avg,
+			 candle.volume, candle.open_interest);
 		if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 			LOG(ERROR) << sqlite3_errmsg(db);
 	}

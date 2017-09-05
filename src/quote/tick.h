@@ -1,12 +1,12 @@
 #ifndef _QUOTE_TICK_H
 #define _QUOTE_TICK_H
 
-#include "quote.h"
+#include "candlestick.h"
 #include <assert.h>
 #include <string.h>
 
 typedef struct {
-	char symbol[QUOTE_SYMBOL_LEN];
+	char symbol[CANDLESTICK_SYMBOL_LEN];
 
 	time_t last_time;
 	double last_price;
@@ -22,28 +22,28 @@ typedef struct {
 } tick_t;
 
 static inline
-void tick_to_quote(const tick_t *tick, struct quote *quot)
+void tick_to_candlestick(const tick_t *tick, struct candlestick *candle)
 {
-	strncpy(quot->symbol, tick->symbol, QUOTE_SYMBOL_LEN);
+	strncpy(candle->symbol, tick->symbol, CANDLESTICK_SYMBOL_LEN);
 
-	quot->begin_time = tick->last_time;
-	quot->end_time = tick->last_time;
+	candle->begin_time = tick->last_time;
+	candle->end_time = tick->last_time;
 
-	quot->open = quot->close = quot->high = quot->low = quot->avg = tick->last_price;
-	quot->volume = tick->last_volume;
-	quot->open_interest = tick->open_interest;
+	candle->open = candle->close = candle->high = candle->low = candle->avg = tick->last_price;
+	candle->volume = tick->last_volume;
+	candle->open_interest = tick->open_interest;
 }
 
 template <class InputIterator>
-void ticks_to_quote(InputIterator first, InputIterator last, struct quote *result)
+void ticks_to_candlestick(InputIterator first, InputIterator last, struct candlestick *result)
 {
-	struct quote quot;
+	struct candlestick candle;
 
-	tick_to_quote(&(*first), result);
+	tick_to_candlestick(&(*first), result);
 
 	while (++first != last) {
-		tick_to_quote(&(*first), &quot);
-		quote_add(result, &quot);
+		tick_to_candlestick(&(*first), &candle);
+		candlestick_add(result, &candle);
 	}
 }
 

@@ -1,14 +1,14 @@
-#ifndef _QUOTE_QUOTE_H
-#define _QUOTE_QUOTE_H
+#ifndef _QUOTE_CANDLESTICK_H
+#define _QUOTE_CANDLESTICK_H
 
 #include <assert.h>
 #include <string.h>
 #include <time.h>
 
-#define QUOTE_SYMBOL_LEN 16
+#define CANDLESTICK_SYMBOL_LEN 16
 
-struct quote {
-	char symbol[QUOTE_SYMBOL_LEN];
+struct candlestick {
+	char symbol[CANDLESTICK_SYMBOL_LEN];
 
 	time_t begin_time;
 	time_t end_time;
@@ -24,9 +24,9 @@ struct quote {
 };
 
 static inline
-void quote_add(struct quote *former, const struct quote *later)
+void candlestick_add(struct candlestick *former, const struct candlestick *later)
 {
-	assert(strncmp(former->symbol, later->symbol, QUOTE_SYMBOL_LEN) == 0);
+	assert(strncmp(former->symbol, later->symbol, CANDLESTICK_SYMBOL_LEN) == 0);
 	assert(former->end_time <= later->begin_time);
 
 	former->end_time = later->end_time;
@@ -42,12 +42,12 @@ void quote_add(struct quote *former, const struct quote *later)
 }
 
 static inline
-struct quote quote_merge(const struct quote *former,
-			 const struct quote *later)
+struct candlestick candlestick_merge(const struct candlestick *former,
+				     const struct candlestick *later)
 {
-	struct quote quote = *former;
-	quote_add(&quote, later);
-	return quote;
+	struct candlestick candlestick = *former;
+	candlestick_add(&candlestick, later);
+	return candlestick;
 }
 
 #endif
