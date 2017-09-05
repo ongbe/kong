@@ -24,7 +24,7 @@ void on_login_event(market_if *sender, void *udata)
 	// convert to real month [1 ~ 12]
 	int mon = tnow->tm_mon + 1;
 
-	std::list<futures_contract_base> tab = aly->get_contracts();
+	std::list<contract_info> tab = aly->get_contracts();
 	for (auto iter = tab.begin(); iter != tab.end(); ++iter) {
 		// not clear how to deal with contracts which affected byseason
 		if (!iter->byseason)

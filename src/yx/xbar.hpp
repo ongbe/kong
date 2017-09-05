@@ -28,8 +28,7 @@ public:
 			bar.high = snd.high;
 		if (bar.low > snd.low)
 			bar.low = snd.low;
-		bar.avg = (bar.avg * bar.merge_count + snd.close) / (bar.merge_count + 1);
-		bar.wavg = (bar.wavg * bar.volume + snd.close * snd.volume) / (bar.volume + snd.volume);
+		bar.avg = (bar.avg * bar.volume + snd.close * snd.volume) / (bar.volume + snd.volume);
 		bar.volume += snd.volume;
 		bar.merge_count++;
 
@@ -52,8 +51,7 @@ inline bar_t tick_to_bar(const tick_t &tick)
 	bar.end_time = tick.last_time;
 
 	bar.volume = tick.last_volume;
-	bar.open = bar.close = bar.high = bar.low =
-		bar.avg = bar.wavg = tick.last_price;
+	bar.open = bar.close = bar.high = bar.low = bar.avg = tick.last_price;
 
 	return bar;
 }

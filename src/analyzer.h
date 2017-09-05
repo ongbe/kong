@@ -13,7 +13,7 @@ namespace yx {
 class analyzer {
 private:
 	sqlite3 *db;
-	std::list<futures_contract_base> contracts;
+	std::list<contract_info> contracts;
 	std::list<xbar> minbars;
 	std::map<std::string, std::list<futures_tick>> ts;
 
@@ -22,7 +22,7 @@ public:
 	~analyzer();
 
 public:
-	std::list<futures_contract_base>& get_contracts();
+	std::list<contract_info>& get_contracts();
 
 	void add_tick(struct futures_tick &tick);
 

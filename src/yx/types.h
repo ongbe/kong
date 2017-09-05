@@ -24,7 +24,6 @@ typedef struct __bar_base {
 	double high;
 	double low;
 	double avg;
-	double wavg;
 
 	int merge_count;
 } bar_t;
@@ -45,7 +44,7 @@ struct futures_bar : public bar_t {
 	struct tick_bar_extra ex;
 };
 
-struct futures_contract_base {
+struct contract_info {
 	char code[2+1];
 	char cn_code[8+1];
 	char exchange[32+1];
