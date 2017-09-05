@@ -5,14 +5,15 @@
 #include <cstdlib>
 #include <glog/logging.h>
 
-namespace yx {
+namespace kong {
 
-template <class I>
-I find_tick_batch_end(const I &first, const I &last, int minutes)
+template <class InputIterator>
+InputIterator find_tick_batch_end(const InputIterator &first,
+				  const InputIterator &last, int minutes)
 {
 	assert(minutes > 0);
 
-	for (I iter = first; iter != last; ++iter) {
+	for (auto iter = first; iter != last; ++iter) {
 		if (iter->last_time / (60*minutes) > first->last_time / (60*minutes))
 			return iter;
 	}
@@ -41,22 +42,22 @@ analyzer::analyzer(): db(NULL)
 	// query contracts
 	char **dbresult;
 	int nrow, ncolumn;
-	if (SQLITE_OK != sqlite3_get_table(db, "SELECT code, cn_code, exchange, byseason,"
-			"code_format, main_month FROM contract_info WHERE active = 1",
+	if (SQLITE_OK != sqlite3_get_table(db, "SELECT name, symbol, exchange, byseason,"
+			"symbol_fmt, main_month FROM contract WHERE active = 1",
 			&dbresult, &nrow, &ncolumn, NULL)) {
 		LOG(FATAL) << sqlite3_errmsg(db);
 		exit(EXIT_FAILURE);
 	}
 
 	for (int i = 1; i < nrow; i++) {
-		contract_info tra;
-		snprintf(tra.code, sizeof(tra.code), "%s", dbresult[i*ncolumn+0]);
-		snprintf(tra.cn_code, sizeof(tra.cn_code), "%s", dbresult[i*ncolumn+1]);
-		snprintf(tra.exchange, sizeof(tra.exchange), "%s", dbresult[i*ncolumn+2]);
-		tra.byseason = atoi(dbresult[i*ncolumn+3]);
-		snprintf(tra.code_format, sizeof(tra.code_format), "%s", dbresult[i*ncolumn+4]);
-		snprintf(tra.main_month, sizeof(tra.main_month), "%s", dbresult[i*ncolumn+5]);
-		contracts.push_back(tra);
+		struct contract con;
+		snprintf(con.name, sizeof(con.name), "%s", dbresult[i*ncolumn+0]);
+		snprintf(con.symbol, sizeof(con.symbol), "%s", dbresult[i*ncolumn+1]);
+		snprintf(con.exchange, sizeof(con.exchange), "%s", dbresult[i*ncolumn+2]);
+		con.byseason = atoi(dbresult[i*ncolumn+3]);
+		snprintf(con.symbol_fmt, sizeof(con.symbol_fmt), "%s", dbresult[i*ncolumn+4]);
+		snprintf(con.main_month, sizeof(con.main_month), "%s", dbresult[i*ncolumn+5]);
+		contracts.push_back(con);
 	}
 }
 
@@ -68,18 +69,18 @@ analyzer::~analyzer()
 	}
 }
 
-std::list<contract_info>&
+std::list<contract>&
 analyzer::get_contracts()
 {
 	return contracts;
 }
 
-void analyzer::add_tick(struct futures_tick &tick)
+void analyzer::add_tick(tick_t &tick)
 {
 	// find ticktab
-	auto iter = ts.find(tick.contract_code);
+	auto iter = ts.find(tick.symbol);
 	if (iter == ts.end())
-		iter = ts.insert(std::make_pair(tick.contract_code, std::list<futures_tick>())).first;
+		iter = ts.insert(std::make_pair(tick.symbol, std::list<tick_t>())).first;
 	auto &ticktab = iter->second;
 
 	/*
@@ -92,13 +93,13 @@ void analyzer::add_tick(struct futures_tick &tick)
 	if (ticktab.empty()) {
 		tick.last_volume = 0;
 	} else {
-		auto pre_day_volume = ticktab.rbegin()->ex.day_volume;
-		if (tick.ex.day_volume == pre_day_volume)
+		auto pre_day_volume = ticktab.rbegin()->day_volume;
+		if (tick.day_volume == pre_day_volume)
 			return;
-		else if (tick.ex.day_volume == 0)
+		else if (tick.day_volume == 0)
 			tick.last_volume = 0;
 		else
-			tick.last_volume = tick.ex.day_volume - ticktab.rbegin()->ex.day_volume;
+			tick.last_volume = tick.day_volume - ticktab.rbegin()->day_volume;
 	}
 
 	// add tick to ts
@@ -106,17 +107,19 @@ void analyzer::add_tick(struct futures_tick &tick)
 
 	// insert bar into minute_detail & minbars
 	char sql[1024];
+	struct quote quot;
 	if (tick.last_time / 60 > ticktab.begin()->last_time / 60) {
 		auto cur = find_tick_batch_end(ticktab.begin(), ticktab.end(), 1);
-		xbar bar = xbar(ticks_to_bar(ticktab.begin(), cur));
-		minbars.push_back(bar);
+		ticks_to_quote(ticktab.begin(), cur, &quot);
+		quotes.push_back(quot);
 		ticktab.erase(ticktab.begin(), cur);
 
-		snprintf(sql, sizeof(sql), "INSERT INTO minute_detail(contract_code,"
-				"begin_time, end_time, volume, open, close, high, low, avg)"
-				" VALUES('%s',  %ld, %ld, %ld,  %lf, %lf, %lf, %lf, %.2lf)",
-				tick.contract_code, bar.raw().begin_time, bar.raw().end_time, bar.raw().volume,
-				bar.raw().open, bar.raw().close, bar.raw().high, bar.raw().low, bar.raw().avg);
+		snprintf(sql, sizeof(sql), "INSERT INTO quote(symbol, begin_time, end_time,"
+			 "open, close, high, low, avg, volume, open_interest)"
+			 " VALUES('%s', %ld, %ld, %lf, %lf, %lf, %lf, %.2lf, %ld, %ld)",
+			 tick.symbol, quot.begin_time, quot.end_time,
+			 quot.open, quot.close, quot.high, quot.low, quot.avg,
+			 quot.volume, quot.open_interest);
 		if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 			LOG(ERROR) << sqlite3_errmsg(db);
 	}

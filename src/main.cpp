@@ -1,21 +1,20 @@
 #include "conf.h"
 #include "analyzer.h"
-#include "market_if.h"
+#include "ctp/market_if.h"
 #include <signal.h>
 #include <pthread.h>
 #include <ctime>
 #include <vector>
 #include <boost/algorithm/string.hpp>
 #include <glog/logging.h>
-using namespace ctp;
 
-static std::vector<futures_tick> ticktab;
+static std::vector<tick_t> ticktab;
 static pthread_mutex_t tick_mutex;
 
 static int runflag = 1;
-static yx::analyzer *aly;
+static kong::analyzer *aly;
 
-void on_login_event(market_if *sender, void *udata)
+void on_login_event(ctp::market_if *sender, void *udata)
 {
 	time_t now = time(NULL);
 	struct tm *tnow = localtime(&now);
@@ -24,7 +23,7 @@ void on_login_event(market_if *sender, void *udata)
 	// convert to real month [1 ~ 12]
 	int mon = tnow->tm_mon + 1;
 
-	std::list<contract_info> tab = aly->get_contracts();
+	std::list<contract> tab = aly->get_contracts();
 	for (auto iter = tab.begin(); iter != tab.end(); ++iter) {
 		// not clear how to deal with contracts which affected byseason
 		if (!iter->byseason)
@@ -38,19 +37,19 @@ void on_login_event(market_if *sender, void *udata)
 			if (mon >= atoi(values[i].c_str()))
 				year++;
 
-			if (strcmp(iter->code_format, "Ymm") == 0)
+			if (strcmp(iter->symbol_fmt, "Ymm") == 0)
 				year %= 10;
 			else
 				year %= 100;
 
-			snprintf(buf, sizeof(buf), "%s%d%02d", iter->code, year, atoi(values[i].c_str()));
+			snprintf(buf, sizeof(buf), "%s%d%02d", iter->symbol, year, atoi(values[i].c_str()));
 			sender->subscribe_market_data(buf, 1);
 			year = tnow->tm_year + 1900;
 		}
 	}
 }
 
-void on_tick_event(market_if *sender, void *udata, futures_tick &tick)
+void on_tick_event(ctp::market_if *sender, void *udata, tick_t &tick)
 {
 	pthread_mutex_lock(&tick_mutex);
 	ticktab.push_back(tick);
@@ -89,7 +88,7 @@ int main(int argc, char *argv[])
 	google::InitGoogleLogging(argv[0]);
 
 	// init conf
-	conf_from_file(&conf, "./ctp.xml");
+	conf_from_file(&conf, "./kong.xml");
 
 	// set signals
 	signal(SIGINT, signal_handler);
@@ -98,13 +97,13 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&tick_mutex, NULL);
 
 	// run analyzer
-	aly = new yx::analyzer;
+	aly = new kong::analyzer;
 	pthread_t aly_pthread;
 	pthread_create(&aly_pthread, NULL, run_analyzer, NULL);
 
 	// run market_if
-	market_if *mif = new market_if(conf.market_addr,
-			conf.broker_id, conf.username, conf.password);
+	ctp::market_if *mif = new ctp::market_if(conf.market_addr,
+		conf.broker_id, conf.username, conf.password);
 	mif->login_event = on_login_event;
 	mif->tick_event = on_tick_event;
 	mif->run();

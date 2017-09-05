@@ -1,33 +1,34 @@
 #ifndef _ANALYZER_H
 #define _ANALYZER_H
 
-#include "yx/types.h"
-#include "yx/xbar.hpp"
+#include "market/contract.h"
+#include "market/quote.h"
+#include "market/tick.h"
 #include <string>
 #include <list>
 #include <map>
 #include <sqlite3.h>
 
-namespace yx {
+namespace kong {
 
 class analyzer {
 private:
 	sqlite3 *db;
-	std::list<contract_info> contracts;
-	std::list<xbar> minbars;
-	std::map<std::string, std::list<futures_tick>> ts;
+	std::list<contract> contracts;
+	std::list<quote> quotes;
+	std::map<std::string, std::list<tick_t>> ts;
 
 public:
 	analyzer();
 	~analyzer();
 
 public:
-	std::list<contract_info>& get_contracts();
+	std::list<contract>& get_contracts();
 
-	void add_tick(struct futures_tick &tick);
+	void add_tick(tick_t &tick);
 
-	template <class I>
-	void add_ticks(I first, I last)
+	template <class InputIterator>
+	void add_ticks(InputIterator first, InputIterator last)
 	{
 		for (auto iter = first; iter != last; ++iter)
 			add_tick(*iter);
