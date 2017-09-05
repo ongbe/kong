@@ -1,9 +1,9 @@
 #ifndef _ANALYZER_H
 #define _ANALYZER_H
 
-#include "market/contract.h"
-#include "market/quote.h"
-#include "market/tick.h"
+#include "quote/contract.h"
+#include "quote/quote.h"
+#include "quote/tick.h"
 #include <string>
 #include <list>
 #include <map>

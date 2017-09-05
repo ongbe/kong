@@ -1,5 +1,5 @@
-#ifndef _MARKET_TICK_H
-#define _MARKET_TICK_H
+#ifndef _QUOTE_TICK_H
+#define _QUOTE_TICK_H
 
 #include "quote.h"
 #include <assert.h>

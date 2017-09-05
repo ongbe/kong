@@ -1,5 +1,5 @@
-#ifndef _MARKET_CONTRACT_H
-#define _MARKET_CONTRACT_H
+#ifndef _QUOTE_CONTRACT_H
+#define _QUOTE_CONTRACT_H
 
 #define CON_NAME_LEN 16
 #define CON_SYMBOL_LEN 16

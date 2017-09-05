@@ -1,5 +1,5 @@
-#ifndef _MARKET_QUOTE_H
-#define _MARKET_QUOTE_H
+#ifndef _QUOTE_QUOTE_H
+#define _QUOTE_QUOTE_H
 
 #include <assert.h>
 #include <string.h>
