@@ -2,28 +2,25 @@
 #define _ANALYZER_H
 
 #include "quote/contract.h"
-#include "quote/candlestick.h"
 #include "quote/tick.h"
+#include "quote/quote.h"
 #include <string>
-#include <list>
+#include <vector>
 #include <map>
 #include <sqlite3.h>
 
 namespace kong {
 
 class analyzer {
-private:
-	sqlite3 *db;
-	std::list<contract> contracts;
-	std::list<candlestick<1>> candles;
-	std::map<std::string, std::list<tick_t>> ts;
+	typedef candlestick<1> candlestick_type;
+	typedef quote<candlestick_type, std::vector<candlestick_type>> quote_type;
 
 public:
 	analyzer();
 	~analyzer();
 
 public:
-	std::list<contract>& get_contracts();
+	std::vector<contract>& get_contracts();
 
 	void add_tick(tick_t &tick);
 
@@ -33,6 +30,11 @@ public:
 		for (auto iter = first; iter != last; ++iter)
 			add_tick(*iter);
 	}
+
+private:
+	sqlite3 *db;
+	std::vector<quote_type> quotes;
+	std::map<std::string, std::vector<tick_t>> ts;
 };
 
 }

@@ -36,6 +36,7 @@ void tick_to_candlestick(const tick_t *tick, T *candle)
 }
 
 template <class T, class InputIterator>
+static inline
 void ticks_to_candlestick(InputIterator first, InputIterator last, T *result)
 {
 	T candle;
@@ -46,6 +47,18 @@ void ticks_to_candlestick(InputIterator first, InputIterator last, T *result)
 		tick_to_candlestick(&(*first), &candle);
 		candlestick_add(result, &candle);
 	}
+}
+
+template <class T, class InputIterator>
+static inline
+InputIterator find_tick_barrier(const InputIterator &first, const InputIterator &last, T*)
+{
+	for (auto iter = first; iter != last; ++iter) {
+		if (iter->last_time / T::period > first->last_time / T::period)
+			return iter;
+	}
+
+	return last;
 }
 
 #endif

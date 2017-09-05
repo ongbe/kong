@@ -23,7 +23,7 @@ void on_login_event(ctp::market_if *sender, void *udata)
 	// convert to real month [1 ~ 12]
 	int mon = tnow->tm_mon + 1;
 
-	std::list<contract> tab = aly->get_contracts();
+	std::vector<contract> tab = aly->get_contracts();
 	for (auto iter = tab.begin(); iter != tab.end(); ++iter) {
 		// not clear how to deal with contracts which affected byseason
 		if (!iter->byseason)

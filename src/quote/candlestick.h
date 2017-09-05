@@ -7,7 +7,7 @@
 
 #define CANDLESTICK_SYMBOL_LEN 16
 
-template <unsigned int N>
+template <unsigned int N = 1>
 struct candlestick {
 	enum { period = N*60 };
 
@@ -28,7 +28,7 @@ struct candlestick {
 
 template <class T>
 static inline
-bool candlestick_check(const T * const candle)
+bool candlestick_check(const T *candle)
 {
 	if (candle->begin_time > candle->end_time)
 		return false;
@@ -39,13 +39,24 @@ bool candlestick_check(const T * const candle)
 }
 
 template <class T>
+static inline
+int candlestick_period_compare(const T *former, const T *later)
+{
+	if (former->begin_time / T::period == later->begin_time / T::period)
+		return 0;
+	else
+		return 1;
+}
+
+template <class T>
+static inline
 void candlestick_add(T *former, const T *later)
 {
 	assert(strncmp(former->symbol, later->symbol, CANDLESTICK_SYMBOL_LEN) == 0);
 	assert(candlestick_check(former));
 	assert(candlestick_check(later));
 	assert(former->end_time <= later->begin_time);
-	assert(former->begin_time/T::period == later->end_time/T::period);
+	assert(candlestick_period_compare(former, later) == 0);
 
 	former->end_time = later->end_time;
 	former->close = later->close;

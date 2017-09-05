@@ -7,20 +7,6 @@
 
 namespace kong {
 
-template <class InputIterator>
-InputIterator find_tick_batch_end(const InputIterator &first,
-				  const InputIterator &last, int minutes)
-{
-	assert(minutes > 0);
-
-	for (auto iter = first; iter != last; ++iter) {
-		if (iter->last_time / (60*minutes) > first->last_time / (60*minutes))
-			return iter;
-	}
-
-	return last;
-}
-
 analyzer::analyzer(): db(NULL)
 {
 	// init sqlite
@@ -57,7 +43,7 @@ analyzer::analyzer(): db(NULL)
 		con.byseason = atoi(dbresult[i*ncolumn+3]);
 		snprintf(con.symbol_fmt, sizeof(con.symbol_fmt), "%s", dbresult[i*ncolumn+4]);
 		snprintf(con.main_month, sizeof(con.main_month), "%s", dbresult[i*ncolumn+5]);
-		contracts.push_back(con);
+		quotes.push_back(quote_type(con));
 	}
 }
 
@@ -69,10 +55,16 @@ analyzer::~analyzer()
 	}
 }
 
-std::list<contract>&
+std::vector<contract>&
 analyzer::get_contracts()
 {
-	return contracts;
+	static std::vector<contract> cons;
+
+	cons.clear();
+	for (auto &item : quotes)
+		cons.push_back(item.con);
+
+	return cons;
 }
 
 void analyzer::add_tick(tick_t &tick)
@@ -80,7 +72,7 @@ void analyzer::add_tick(tick_t &tick)
 	// find ticktab
 	auto iter = ts.find(tick.symbol);
 	if (iter == ts.end())
-		iter = ts.insert(std::make_pair(tick.symbol, std::list<tick_t>())).first;
+		iter = ts.insert(std::make_pair(tick.symbol, std::vector<tick_t>())).first;
 	auto &ticktab = iter->second;
 
 	/*
@@ -99,21 +91,25 @@ void analyzer::add_tick(tick_t &tick)
 		else if (tick.day_volume == 0)
 			tick.last_volume = 0;
 		else
-			tick.last_volume = tick.day_volume - ticktab.rbegin()->day_volume;
+			tick.last_volume = tick.day_volume - pre_day_volume;
 	}
 
 	// add tick to ts
 	ticktab.push_back(tick);
 
 	// insert bar into minute_detail & minbars
-	char sql[1024];
-	candlestick<1> candle;
-	if (tick.last_time / 60 > ticktab.begin()->last_time / 60) {
-		auto cur = find_tick_batch_end(ticktab.begin(), ticktab.end(), 1);
+	if (tick.last_time / candlestick_type::period >
+	    ticktab.begin()->last_time / candlestick_type::period) {
+		candlestick_type candle;
+		auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(), &candle);
 		ticks_to_candlestick(ticktab.begin(), cur, &candle);
-		candles.push_back(candle);
 		ticktab.erase(ticktab.begin(), cur);
 
+		for (auto &item : quotes)
+			if (strcpy(candle.symbol, item.con.symbol) == 0)
+				item.add_candle(candle);
+
+		char sql[1024];
 		snprintf(sql, sizeof(sql), "INSERT INTO candlestick(symbol, begin_time, end_time,"
 			 "open, close, high, low, avg, volume, open_interest)"
 			 " VALUES('%s', %ld, %ld, %lf, %lf, %lf, %lf, %.2lf, %ld, %ld)",
