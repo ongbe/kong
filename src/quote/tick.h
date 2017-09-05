@@ -1,7 +1,7 @@
 #ifndef _QUOTE_TICK_H
 #define _QUOTE_TICK_H
 
-#include "candlestick.h"
+#include "quote/candlestick.h"
 #include <assert.h>
 #include <string.h>
 
@@ -21,8 +21,9 @@ typedef struct {
 	long day_volume;
 } tick_t;
 
+template <class T>
 static inline
-void tick_to_candlestick(const tick_t *tick, struct candlestick *candle)
+void tick_to_candlestick(const tick_t *tick, T *candle)
 {
 	strncpy(candle->symbol, tick->symbol, CANDLESTICK_SYMBOL_LEN);
 
@@ -34,10 +35,10 @@ void tick_to_candlestick(const tick_t *tick, struct candlestick *candle)
 	candle->open_interest = tick->open_interest;
 }
 
-template <class InputIterator>
-void ticks_to_candlestick(InputIterator first, InputIterator last, struct candlestick *result)
+template <class T, class InputIterator>
+void ticks_to_candlestick(InputIterator first, InputIterator last, T *result)
 {
-	struct candlestick candle;
+	T candle;
 
 	tick_to_candlestick(&(*first), result);
 

@@ -15,7 +15,7 @@ class analyzer {
 private:
 	sqlite3 *db;
 	std::list<contract> contracts;
-	std::list<candlestick> candles;
+	std::list<candlestick<1>> candles;
 	std::map<std::string, std::list<tick_t>> ts;
 
 public:

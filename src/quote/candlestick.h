@@ -7,7 +7,10 @@
 
 #define CANDLESTICK_SYMBOL_LEN 16
 
+template <unsigned int N>
 struct candlestick {
+	enum { period = N*60 };
+
 	char symbol[CANDLESTICK_SYMBOL_LEN];
 
 	time_t begin_time;
@@ -23,11 +26,26 @@ struct candlestick {
 	long open_interest;
 };
 
+template <class T>
 static inline
-void candlestick_add(struct candlestick *former, const struct candlestick *later)
+bool candlestick_check(const T * const candle)
+{
+	if (candle->begin_time > candle->end_time)
+		return false;
+	else if (candle->begin_time/T::period != candle->end_time/T::period)
+		return false;
+	else
+		return true;
+}
+
+template <class T>
+void candlestick_add(T *former, const T *later)
 {
 	assert(strncmp(former->symbol, later->symbol, CANDLESTICK_SYMBOL_LEN) == 0);
+	assert(candlestick_check(former));
+	assert(candlestick_check(later));
 	assert(former->end_time <= later->begin_time);
+	assert(former->begin_time/T::period == later->end_time/T::period);
 
 	former->end_time = later->end_time;
 	former->close = later->close;
@@ -41,13 +59,13 @@ void candlestick_add(struct candlestick *former, const struct candlestick *later
 	former->open_interest = later->open_interest;
 }
 
+template <class T>
 static inline
-struct candlestick candlestick_merge(const struct candlestick *former,
-				     const struct candlestick *later)
+T candlestick_merge(const T *former, const T *later)
 {
-	struct candlestick candlestick = *former;
-	candlestick_add(&candlestick, later);
-	return candlestick;
+	T ret = *former;
+	candlestick_add(&ret, later);
+	return ret;
 }
 
 #endif

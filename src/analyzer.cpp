@@ -107,7 +107,7 @@ void analyzer::add_tick(tick_t &tick)
 
 	// insert bar into minute_detail & minbars
 	char sql[1024];
-	struct candlestick candle;
+	candlestick<1> candle;
 	if (tick.last_time / 60 > ticktab.begin()->last_time / 60) {
 		auto cur = find_tick_batch_end(ticktab.begin(), ticktab.end(), 1);
 		ticks_to_candlestick(ticktab.begin(), cur, &candle);
