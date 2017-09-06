@@ -11,7 +11,7 @@ market_if::market_if(char const *market_addr, char const *broker_id,
 		char const *username, char const *password)
 	: api(NULL)
 	, api_reqid(0)
-	, udata(NULL)
+	, data(NULL)
 	, login_event(NULL)
 	, tick_event(NULL)
 {
@@ -115,7 +115,7 @@ void market_if::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThos
 	LOG(INFO) << "success to login";
 
 	if (login_event)
-		login_event(this, udata);
+		login_event(this);
 }
 
 ///登出请求响应
@@ -193,7 +193,7 @@ void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarke
 	tick.day_volume = pDepthMarketData->Volume;
 
 	if (tick_event)
-		tick_event(this, udata, tick);
+		tick_event(this, tick);
 }
 
 ///询价通知

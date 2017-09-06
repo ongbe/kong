@@ -14,7 +14,7 @@ static pthread_mutex_t tick_mutex;
 static int runflag = 1;
 static kong::analyzer *aly;
 
-void on_login_event(ctp::market_if *sender, void *udata)
+void on_login_event(ctp::market_if *mif)
 {
 	time_t now = time(NULL);
 	struct tm *tnow = localtime(&now);
@@ -43,13 +43,13 @@ void on_login_event(ctp::market_if *sender, void *udata)
 				year %= 100;
 
 			snprintf(buf, sizeof(buf), "%s%d%02d", iter->symbol, year, atoi(values[i].c_str()));
-			sender->subscribe_market_data(buf, 1);
+			mif->subscribe_market_data(buf, 1);
 			year = tnow->tm_year + 1900;
 		}
 	}
 }
 
-void on_tick_event(ctp::market_if *sender, void *udata, tick_t &tick)
+void on_tick_event(ctp::market_if *mif, tick_t &tick)
 {
 	pthread_mutex_lock(&tick_mutex);
 	ticktab.push_back(tick);

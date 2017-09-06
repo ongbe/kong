@@ -28,13 +28,13 @@ private:
 
 public:
 	// signals
-	void *udata;
-	void (*login_event)(market_if *sender, void *udata);
-	void (*tick_event)(market_if *sender, void *udata, tick_t &tick);
+	void *data;
+	void (*login_event)(market_if *mif);
+	void (*tick_event)(market_if *mif, tick_t &tick);
 
 public:
-	market_if(char const *market_addr, char const *broker_id,
-			char const *username, char const *password);
+	market_if(const char *market_addr, const char *broker_id,
+		  const char *username, const char *password);
 	virtual ~market_if();
 
 public:
