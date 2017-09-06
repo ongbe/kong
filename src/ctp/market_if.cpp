@@ -168,6 +168,12 @@ void market_if::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecif
 ///深度行情通知
 void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
+	/*
+	 * Call auction: 8:59:00, 20:59:00
+	 * Open time:    9:00:00, 10:30:00, 13:30:00, 21:00:00
+	 * Close time:   10:15:00, 11:30:00, 15:00:00, 23:00:00, 23:30:00, 01:00:00, 02:30:00
+	 */
+
 	boost::posix_time::ptime remote_ptime = boost::posix_time::ptime(
 		boost::gregorian::from_undelimited_string(pDepthMarketData->TradingDay),
 		boost::posix_time::duration_from_string(pDepthMarketData->UpdateTime));
@@ -175,12 +181,39 @@ void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarke
 	time_t remote_time = mktime(&remote_tm);
 	time_t utc_time = time(NULL);
 
+	// fix remote date
 	if ((remote_tm.tm_hour >= 9 && remote_tm.tm_hour <= 15) ||
 	    remote_tm.tm_hour > 20 || remote_tm.tm_hour < 3) {
 		while (remote_time + 3600 < utc_time)
 			remote_time += 3600;
 		while (remote_time - 3600 > utc_time)
 			remote_time -= 3600;
+	}
+
+	// fix remote time
+	if (remote_tm.tm_sec == 0) {
+#ifdef CTP_FIX_CALL_AUCTION
+		if ((remote_tm.tm_hour == 8 && remote_tm.tm_min == 59) ||
+		    (remote_tm.tm_hour == 20 && remote_tm.tm_min == 59))
+			remote_time += 60;
+#endif
+#ifdef CTP_FIX_OPEN_TIME
+		if ((remote_tm.tm_hour == 9 && remote_tm.tm_min == 0) ||
+		    (remote_tm.tm_hour == 10 && remote_tm.tm_min == 30) ||
+		    (remote_tm.tm_hour == 13 && remote_tm.tm_min == 30) ||
+		    (remote_tm.tm_hour == 21 && remote_tm.tm_min == 0))
+			remote_time++;
+#endif
+#ifdef CTP_FIX_CLOSE_TIME
+		if ((remote_tm.tm_hour == 10 && remote_tm.tm_min == 15) ||
+		    (remote_tm.tm_hour == 11 && remote_tm.tm_min == 30) ||
+		    (remote_tm.tm_hour == 15 && remote_tm.tm_min == 0) ||
+		    (remote_tm.tm_hour == 23 && remote_tm.tm_min == 0) ||
+		    (remote_tm.tm_hour == 23 && remote_tm.tm_min == 30) ||
+		    (remote_tm.tm_hour == 1 && remote_tm.tm_min == 0) ||
+		    (remote_tm.tm_hour == 2 && remote_tm.tm_min == 30))
+			remote_time--;
+#endif
 	}
 
 	// tick base

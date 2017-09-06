@@ -4,7 +4,7 @@
 
 PREFIX?=./_install
 
-CPPFLAGS = -Wall -Werror -std=c++11 -Iinclude -Isrc
+CPPFLAGS = -Wall -Werror -std=c++11 -Iinclude -Isrc -DCTP_FIX_CLOSE_TIME
 LDFLAGS = -lpthread -lboost_date_time -lsqlite3 -lglog lib/*.so
 
 all: kong
