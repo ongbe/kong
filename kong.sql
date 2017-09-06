@@ -57,21 +57,23 @@ CREATE VIEW v_candlestick_min AS
 	SELECT symbol,
 		datetime(begin_time, 'unixepoch', 'localtime') btime,
 		datetime(end_time, 'unixepoch', 'localtime') etime,
-		open, close, high, low, avg, volume, open_interest
+		volume, open_interest,
+		open, close, high, low, avg
 	FROM candlestick;
 
-DROP VIEW IF EXISTS v_candlestick_quarter;
-CREATE VIEW v_candlestick_quarter AS
+DROP VIEW IF EXISTS v_candlestick_hour;
+CREATE VIEW v_candlestick_hour AS
 	SELECT a.symbol,
 		datetime(a.begin_time, 'unixepoch', 'localtime') btime,
 		datetime(a.end_time, 'unixepoch', 'localtime') etime,
-		b.open, c.close, a.high, a.low, a.avg, a.volume, c.open_interest
+		a.volume, c.open_interest,
+		b.open, c.close, a.high, a.low, a.avg
 	FROM
 	(SELECT symbol, min(begin_time) begin_time, max(end_time) end_time,
-	max(high) high, min(low) low, round(sum(volume*avg)/sum(volume), 2) avg,
-	sum(volume) volume
+	sum(volume) volume,
+	max(high) high, min(low) low, round(sum(volume*avg)/sum(volume), 2) avg
 	FROM candlestick
-	GROUP BY symbol, begin_time / 900) as a
+	GROUP BY symbol, begin_time / 3600) as a
 	LEFT JOIN candlestick b
 	ON a.symbol = b.symbol AND a.begin_time = b.begin_time
 	LEFT JOIN candlestick c
