@@ -75,12 +75,12 @@ void datacore::add_tick(tick_t &tick)
 	auto &ticktab = iter->second;
 
 	/*
-	* calculation of last volume
-	* 1) - first tick, set last_volume = 0
-	* 2) - day_volume == pre_day_volume, do nothing
-	* 3) - day_volume == 0, set last_volume = 0
-	* 4) - day_volume != 0, set last_volume = day_volume - pre_day_volume
-	*/
+	 * calculation of last volume
+	 * 1) - first tick, set last_volume = 0
+	 * 2) - day_volume == pre_day_volume, do nothing
+	 * 3) - day_volume == 0, set last_volume = 0
+	 * 4) - day_volume != 0, set last_volume = day_volume - pre_day_volume
+	 */
 	if (ticktab.empty()) {
 		tick.last_volume = 0;
 	} else {
@@ -93,31 +93,36 @@ void datacore::add_tick(tick_t &tick)
 			tick.last_volume = tick.day_volume - pre_day_volume;
 	}
 
-	// add tick to ts
+	// add tick
 	ticktab.push_back(tick);
 
-	// insert bar into minute_detail & minbars
-	if (tick.last_time / candlestick_type::period >
-	    ticktab.begin()->last_time / candlestick_type::period) {
-		candlestick_type candle;
-		auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(), &candle);
-		ticks_to_candlestick(ticktab.begin(), cur, &candle);
-		ticktab.erase(ticktab.begin(), cur);
+	// add candle
+	if (tick.last_time / candlestick_type::period ==
+	    ticktab.begin()->last_time / candlestick_type::period)
+		return;
 
-		for (auto &item : quotes)
-			if (strcpy(candle.symbol, item.con.symbol) == 0)
-				item.add_candle(candle);
+	candlestick_type candle;
+	auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(), &candle);
+	ticks_to_candlestick(ticktab.begin(), cur, &candle);
+	ticktab.erase(ticktab.begin(), cur);
 
-		char sql[1024];
-		snprintf(sql, sizeof(sql), "INSERT INTO candlestick(symbol, begin_time, end_time,"
-			 "open, close, high, low, avg, volume, open_interest)"
-			 " VALUES('%s', %ld, %ld, %lf, %lf, %lf, %lf, %.2lf, %ld, %ld)",
-			 tick.symbol, candle.begin_time, candle.end_time,
-			 candle.open, candle.close, candle.high, candle.low, candle.avg,
-			 candle.volume, candle.open_interest);
-		if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
-			LOG(ERROR) << sqlite3_errmsg(db);
-	}
+	if (!candle.volume)
+		return;
+
+	for (auto &item : quotes)
+		if (strcpy(candle.symbol, item.con.symbol) == 0)
+			item.add_candle(candle);
+
+	// persist candle
+	char sql[1024];
+	snprintf(sql, sizeof(sql), "INSERT INTO candlestick(symbol, begin_time, end_time,"
+		 "open, close, high, low, avg, volume, open_interest)"
+		 " VALUES('%s', %ld, %ld, %lf, %lf, %lf, %lf, %.2lf, %ld, %ld)",
+		 tick.symbol, candle.begin_time, candle.end_time,
+		 candle.open, candle.close, candle.high, candle.low, candle.avg,
+		 candle.volume, candle.open_interest);
+	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
+		LOG(ERROR) << sqlite3_errmsg(db);
 }
 
 }
