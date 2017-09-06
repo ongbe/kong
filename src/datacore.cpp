@@ -1,4 +1,4 @@
-#include "analyzer.h"
+#include "datacore.h"
 #include "conf.h"
 #include <cassert>
 #include <cstdio>
@@ -7,7 +7,7 @@
 
 namespace kong {
 
-analyzer::analyzer(): db(NULL)
+datacore::datacore(): db(NULL)
 {
 	// init sqlite
 	char sql[1024];
@@ -47,7 +47,7 @@ analyzer::analyzer(): db(NULL)
 	}
 }
 
-analyzer::~analyzer()
+datacore::~datacore()
 {
 	if (db) {
 		sqlite3_close(db);
@@ -55,8 +55,7 @@ analyzer::~analyzer()
 	}
 }
 
-std::vector<contract>&
-analyzer::get_contracts()
+std::vector<contract>& datacore::get_contracts()
 {
 	static std::vector<contract> cons;
 
@@ -67,7 +66,7 @@ analyzer::get_contracts()
 	return cons;
 }
 
-void analyzer::add_tick(tick_t &tick)
+void datacore::add_tick(tick_t &tick)
 {
 	// find ticktab
 	auto iter = ts.find(tick.symbol);

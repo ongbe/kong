@@ -1,5 +1,5 @@
 #include "conf.h"
-#include "analyzer.h"
+#include "datacore.h"
 #include "ctp/market_if.h"
 #include <signal.h>
 #include <pthread.h>
@@ -12,7 +12,7 @@ static std::vector<tick_t> ticktab;
 static pthread_mutex_t tick_mutex;
 
 static int runflag = 1;
-static kong::analyzer *aly;
+static kong::datacore *dcore;
 
 void on_login_event(ctp::market_if *mif)
 {
@@ -23,7 +23,7 @@ void on_login_event(ctp::market_if *mif)
 	// convert to real month [1 ~ 12]
 	int mon = tnow->tm_mon + 1;
 
-	std::vector<contract> tab = aly->get_contracts();
+	std::vector<contract> tab = dcore->get_contracts();
 	for (auto iter = tab.begin(); iter != tab.end(); ++iter) {
 		// not clear how to deal with contracts which affected byseason
 		if (!iter->byseason)
@@ -56,7 +56,7 @@ void on_tick_event(ctp::market_if *mif, tick_t &tick)
 	pthread_mutex_unlock(&tick_mutex);
 }
 
-void* run_analyzer(void *)
+void* run_datacore(void *)
 {
 	while (runflag) {
 		if (ticktab.size() == 0) {
@@ -65,7 +65,7 @@ void* run_analyzer(void *)
 		}
 
 		pthread_mutex_lock(&tick_mutex);
-		aly->add_ticks(ticktab.begin(), ticktab.end());
+		dcore->add_ticks(ticktab.begin(), ticktab.end());
 		ticktab.clear();
 		pthread_mutex_unlock(&tick_mutex);
 	}
@@ -96,10 +96,10 @@ int main(int argc, char *argv[])
 	// init mutex for ticktab
 	pthread_mutex_init(&tick_mutex, NULL);
 
-	// run analyzer
-	aly = new kong::analyzer;
-	pthread_t aly_pthread;
-	pthread_create(&aly_pthread, NULL, run_analyzer, NULL);
+	// run datacore
+	dcore = new kong::datacore;
+	pthread_t dcore_pthread;
+	pthread_create(&dcore_pthread, NULL, run_datacore, NULL);
 
 	// run market_if
 	ctp::market_if *mif = new ctp::market_if(conf.market_addr,
@@ -110,11 +110,11 @@ int main(int argc, char *argv[])
 
 	// run tarder_if
 
-	// wait aly
-	pthread_join(aly_pthread, NULL);
+	// wait dcore
+	pthread_join(dcore_pthread, NULL);
 
 	// fini
-	delete aly;
+	delete dcore;
 	delete mif;
 	pthread_mutex_destroy(&tick_mutex);
 	google::ShutdownGoogleLogging();

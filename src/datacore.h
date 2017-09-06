@@ -1,5 +1,5 @@
-#ifndef _ANALYZER_H
-#define _ANALYZER_H
+#ifndef _DATACORE_H
+#define _DATACORE_H
 
 #include "quote/contract.h"
 #include "quote/tick.h"
@@ -11,13 +11,13 @@
 
 namespace kong {
 
-class analyzer {
+class datacore final {
 	typedef candlestick<1> candlestick_type;
 	typedef quote<candlestick_type, std::vector<candlestick_type>> quote_type;
 
 public:
-	analyzer();
-	~analyzer();
+	datacore();
+	~datacore();
 
 public:
 	std::vector<contract>& get_contracts();

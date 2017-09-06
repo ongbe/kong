@@ -9,7 +9,7 @@ LDFLAGS = -lpthread -lboost_date_time -lsqlite3 -lglog lib/*.so
 
 all: kong
 
-kong: src/main.o src/conf.o src/analyzer.o src/ctp/market_if.o
+kong: src/main.o src/conf.o src/datacore.o src/ctp/market_if.o
 	g++ $(LDFLAGS) -o $@ $^
 
 %.o: %.cpp
