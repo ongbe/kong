@@ -1,6 +1,7 @@
 #include "market_if.h"
 #include <cctype>
 #include <cstring>
+#include <ctime>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <glog/logging.h>
@@ -167,22 +168,25 @@ void market_if::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecif
 ///深度行情通知
 void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData)
 {
-	// FIXME: fix last time
-	//        even can't resolve recieve last friday night tick's time
-	//        in monday moning when restart ctp
-	boost::posix_time::ptime remote_time = boost::posix_time::ptime(
+	boost::posix_time::ptime remote_ptime = boost::posix_time::ptime(
 		boost::gregorian::from_undelimited_string(pDepthMarketData->TradingDay),
 		boost::posix_time::duration_from_string(pDepthMarketData->UpdateTime));
-	boost::posix_time::ptime china_time = boost::posix_time::second_clock::universal_time()
-		+ boost::posix_time::time_duration(8, 0, 0);
-	if (remote_time - china_time > boost::posix_time::time_duration(12, 0, 0))
-		remote_time -= boost::posix_time::time_duration(24, 0, 0);
-	struct tm tm_remote_time = boost::posix_time::to_tm(remote_time);
+	struct tm remote_tm = boost::posix_time::to_tm(remote_ptime);
+	time_t remote_time = mktime(&remote_tm);
+	time_t utc_time = time(NULL);
+
+	if ((remote_tm.tm_hour >= 9 && remote_tm.tm_hour <= 15) ||
+	    remote_tm.tm_hour > 20 || remote_tm.tm_hour < 3) {
+		while (remote_time + 3600 < utc_time)
+			remote_time += 3600;
+		while (remote_time - 3600 > utc_time)
+			remote_time -= 3600;
+	}
 
 	// tick base
 	tick_t tick;
 	strncpy(tick.symbol, pDepthMarketData->InstrumentID, sizeof(tick.symbol));
-	tick.last_time = mktime(&tm_remote_time);
+	tick.last_time = remote_time;
 	tick.last_volume = 0;
 	tick.last_price = pDepthMarketData->LastPrice;
 	tick.sell_volume = pDepthMarketData->AskVolume1;
