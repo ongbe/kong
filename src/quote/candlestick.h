@@ -52,7 +52,7 @@ template <class T>
 static inline
 void candlestick_add(T *former, const T *later)
 {
-	assert(strncmp(former->symbol, later->symbol, CANDLESTICK_SYMBOL_LEN) == 0);
+	assert(strncmp(former->symbol, later->symbol, sizeof(former->symbol)) == 0);
 	assert(candlestick_check(former));
 	assert(candlestick_check(later));
 	assert(former->end_time <= later->begin_time);
@@ -77,6 +77,20 @@ T candlestick_merge(const T *former, const T *later)
 	T ret = *former;
 	candlestick_add(&ret, later);
 	return ret;
+}
+
+template <class FROM, class TO>
+TO* candlestick_convert(FROM *t)
+{
+	assert((int)FROM::period < (int)TO::period);
+	return reinterpret_cast<TO*>(t);
+}
+
+template <class FROM, class TO>
+void candlestick_convert(FROM *src, TO *dest)
+{
+	assert((int)FROM::period < (int)TO::period);
+	*dest = *(reinterpret_cast<TO*>(src));
 }
 
 #endif
