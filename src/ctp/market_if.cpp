@@ -184,9 +184,9 @@ void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarke
 	// fix remote date
 	if ((remote_tm.tm_hour >= 9 && remote_tm.tm_hour <= 15) ||
 	    remote_tm.tm_hour > 20 || remote_tm.tm_hour < 3) {
-		while (remote_time + 3600 < utc_time)
+		while (remote_time + 1800 < utc_time) // 1800 other than 3600
 			remote_time += 3600;
-		while (remote_time - 3600 > utc_time)
+		while (remote_time - 1800 > utc_time)
 			remote_time -= 3600;
 	}
 
