@@ -174,16 +174,19 @@ void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarke
 	 * Close time:   10:15:00, 11:30:00, 15:00:00, 23:00:00, 23:30:00, 01:00:00, 02:30:00
 	 */
 
-	boost::posix_time::ptime remote_ptime = boost::posix_time::ptime(
-		boost::gregorian::from_undelimited_string(pDepthMarketData->TradingDay),
-		boost::posix_time::duration_from_string(pDepthMarketData->UpdateTime));
-	struct tm remote_tm = boost::posix_time::to_tm(remote_ptime);
+	using namespace boost::posix_time;
+	using namespace boost::gregorian;
+	ptime remote_ptime = ptime(from_undelimited_string(pDepthMarketData->TradingDay),
+				   duration_from_string(pDepthMarketData->UpdateTime));
+	struct tm remote_tm = to_tm(remote_ptime);
 	time_t remote_time = mktime(&remote_tm);
 	time_t utc_time = time(NULL);
 
 	// fix remote date
-	if ((remote_tm.tm_hour >= 9 && remote_tm.tm_hour <= 15) ||
-	    remote_tm.tm_hour > 20 || remote_tm.tm_hour < 3) {
+	if ((remote_ptime.time_of_day() >= time_duration(8,59,0) &&
+	     remote_ptime.time_of_day() <= time_duration(15,0,0)) ||
+	    remote_ptime.time_of_day() >= time_duration(20,59,0) ||
+	    remote_ptime.time_of_day() <= time_duration(2,30,0)) {
 		while (remote_time + 1800 < utc_time) // 1800 other than 3600
 			remote_time += 3600;
 		while (remote_time - 1800 > utc_time)
