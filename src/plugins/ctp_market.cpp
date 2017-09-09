@@ -50,7 +50,7 @@ void on_login_event(ctp::market_if *mif)
 	}
 }
 
-void on_tick_event(ctp::market_if *mif, tick_t &tick)
+void on_tick_event(ctp::market_if *mif, const tick_t &tick)
 {
 	pthread_mutex_lock(&tick_mutex);
 	ticktab.push_back(tick);
@@ -81,12 +81,10 @@ LIBY_PLUGIN int plugin_init()
 	pthread_mutex_init(&tick_mutex, NULL);
 
 	// run market_if
-	ctp::market_if *mif = new ctp::market_if
-		(conf.market_addr, conf.broker_id,
-		 conf.username, conf.password);
-	//mif = new ctp::market_if
-	//	("tcp://27.115.56.234:41213", "8580",
-	//	 "000000", "000000");
+	mif = new ctp::market_if(conf.get<std::string>("conf.market.market_addr"),
+				 conf.get<std::string>("conf.market.broker_id"),
+				 conf.get<std::string>("conf.market.username"),
+				 conf.get<std::string>("conf.market.password"));
 	mif->login_event = on_login_event;
 	mif->tick_event = on_tick_event;
 	mif->run();
@@ -97,7 +95,6 @@ LIBY_PLUGIN int plugin_init()
 
 LIBY_PLUGIN void plugin_exit()
 {
-	// mif->stop();
 	delete mif;
 	runflag = 0;
 	pthread_join(upload_thread, NULL);

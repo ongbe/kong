@@ -2,6 +2,7 @@
 #define _CTP_MARKET_IF_H
 
 #include "quote/tick.h"
+#include <string>
 #include <ThostFtdcMdApi.h>
 
 namespace ctp {
@@ -21,20 +22,22 @@ private:
 
 private:
 	// rc
-	char market_addr[64];
-	char broker_id[64];
-	char username[64];
-	char password[64];
+	std::string market_addr;
+	std::string broker_id;
+	std::string username;
+	std::string password;
 
 public:
 	// signals
-	void *data;
+	void *private_data;
 	void (*login_event)(market_if *mif);
-	void (*tick_event)(market_if *mif, tick_t &tick);
+	void (*tick_event)(market_if *mif, const tick_t &tick);
 
 public:
-	market_if(const char *market_addr, const char *broker_id,
-		  const char *username, const char *password);
+	market_if(const std::string &market_addr,
+		  const std::string &broker_id,
+		  const std::string &username,
+		  const std::string &password);
 	virtual ~market_if();
 
 public:
@@ -61,25 +64,37 @@ public:
 	virtual void OnHeartBeatWarning(int nTimeLapse);
 
 	///登录请求响应
-	virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	virtual void OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
+				    CThostFtdcRspInfoField *pRspInfo,
+				    int nRequestID, bool bIsLast);
 
 	///登出请求响应
-	virtual void OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	virtual void OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout,
+				     CThostFtdcRspInfoField *pRspInfo,
+				     int nRequestID, bool bIsLast);
 
 	///错误应答
 	virtual void OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 
 	///订阅行情应答
-	virtual void OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	virtual void OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument,
+					CThostFtdcRspInfoField *pRspInfo,
+					int nRequestID, bool bIsLast);
 
 	///取消订阅行情应答
-	virtual void OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	virtual void OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument,
+					  CThostFtdcRspInfoField *pRspInfo,
+					  int nRequestID, bool bIsLast);
 
 	///订阅询价应答
-	virtual void OnRspSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	virtual void OnRspSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument,
+					 CThostFtdcRspInfoField *pRspInfo,
+					 int nRequestID, bool bIsLast);
 
 	///取消订阅询价应答
-	virtual void OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+	virtual void OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument,
+					   CThostFtdcRspInfoField *pRspInfo,
+					   int nRequestID, bool bIsLast);
 
 	///深度行情通知
 	virtual void OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData);

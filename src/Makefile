@@ -14,7 +14,7 @@ datacore.so: datacore.o conf.o
 	$(CXX) $(LDFLAGS) -shared -o $@ $^
 
 plugins/ctp_market.so: plugins/ctp_market.o plugins/ctp_market_if.o
-	$(CXX) $(LDFLAGS) -shared -lpthread -o $@ $^ ../lib/thost*.so
+	$(CXX) $(LDFLAGS) -shared -lpthread -o $@ $^ ../lib/thostmduserapi.so
 
 %.o: %.cpp
 	$(CXX) $(CPPFLAGS) -fPIC -c -o $@ $<

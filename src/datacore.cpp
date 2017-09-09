@@ -91,16 +91,18 @@ void datacore_init()
 	// init sqlite
 	char sql[1024];
 
-	if (SQLITE_OK != sqlite3_open(conf.dbfile, &db)) {
+	if (SQLITE_OK != sqlite3_open(conf.get<std::string>("conf.sqlite.dbfile").c_str(), &db)) {
 		LOG(FATAL) << sqlite3_errmsg(db);
 		exit(EXIT_FAILURE);
 	}
 
-	snprintf(sql, sizeof(sql), "PRAGMA journal_mode = %s", conf.journal_mode);
+	snprintf(sql, sizeof(sql), "PRAGMA journal_mode = %s",
+		 conf.get<std::string>("conf.sqlite.journal_mode").c_str());
 	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 		LOG(ERROR) << sqlite3_errmsg(db);
 
-	snprintf(sql, sizeof(sql), "PRAGMA synchronous = %s", conf.synchronous);
+	snprintf(sql, sizeof(sql), "PRAGMA synchronous = %s",
+		 conf.get<std::string>("conf.sqlite.synchronous").c_str());
 	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 		LOG(ERROR) << sqlite3_errmsg(db);
 

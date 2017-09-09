@@ -1,4 +1,7 @@
 <conf>
+  <logdir>./log</logdir>
+  <plugindir>./plugins</plugindir>
+
   <sqlite>
     <dbfile>./ctp.db</dbfile>
     <journal_mode>WAL</journal_mode>

@@ -57,16 +57,16 @@ static void signal_handler(int sig)
 int main(int argc, char *argv[])
 {
 	// init
-	conf_from_file(&conf, "./kong.xml");
+	conf_init("./kong.xml");
 
-	FLAGS_log_dir = "./log";
+	FLAGS_log_dir = conf.get<std::string>("conf.logdir").c_str();
 	FLAGS_minloglevel = google::INFO;
 	FLAGS_stderrthreshold = google::INFO;
 	FLAGS_colorlogtostderr = true;
 	google::InitGoogleLogging(argv[0]);
 
 	signal(SIGINT, signal_handler);
-	plugins_init("./plugins/");
+	plugins_init(conf.get<std::string>("conf.plugindir").c_str());
 	datacore_init();
 
 	// sleep

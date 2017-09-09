@@ -8,31 +8,35 @@
 
 namespace ctp {
 
-market_if::market_if(char const *market_addr, char const *broker_id,
-		char const *username, char const *password)
+market_if::market_if(const std::string &market_addr,
+		     const std::string &broker_id,
+		     const std::string &username,
+		     const std::string &password)
 	: api(NULL)
 	, api_reqid(0)
-	, data(NULL)
+	, market_addr(market_addr)
+	, broker_id(broker_id)
+	, username(username)
+	, password(password)
+	, private_data(NULL)
 	, login_event(NULL)
 	, tick_event(NULL)
 {
-	strncpy(this->market_addr, market_addr, sizeof(this->market_addr));
-	strncpy(this->broker_id, broker_id, sizeof(this->broker_id));
-	strncpy(this->username, username, sizeof(this->username));
-	strncpy(this->password, password, sizeof(this->password));
 	api = CThostFtdcMdApi::CreateFtdcMdApi("/tmp/");
 }
 
 market_if::~market_if()
 {
-	if (api)
+	if (api) {
 		api->Release();
+		api = NULL;
+	}
 }
 
 void market_if::run()
 {
 	api->RegisterSpi(this);
-	api->RegisterFront(this->market_addr);
+	api->RegisterFront(const_cast<char*>(market_addr.c_str()));
 	api->Init();
 }
 
@@ -68,9 +72,9 @@ int market_if::login()
 {
 	CThostFtdcReqUserLoginField req;
 	memset(&req, 0, sizeof(req));
-	strncpy(req.BrokerID, broker_id, sizeof(req.BrokerID));
-	strncpy(req.UserID, username, sizeof(req.UserID));
-	strncpy(req.Password, password, sizeof(req.Password));
+	strncpy(req.BrokerID, broker_id.c_str(), sizeof(req.BrokerID));
+	strncpy(req.UserID, username.c_str(), sizeof(req.UserID));
+	strncpy(req.Password, password.c_str(), sizeof(req.Password));
 	return api->ReqUserLogin(&req, api_reqid++);
 }
 
@@ -106,7 +110,9 @@ void market_if::OnHeartBeatWarning(int nTimeLapse)
 }
 
 ///登录请求响应
-void market_if::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void market_if::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin,
+			       CThostFtdcRspInfoField *pRspInfo,
+			       int nRequestID, bool bIsLast)
 {
 	if (pRspInfo->ErrorID) {
 		LOG(FATAL) << "ErrorID: " << pRspInfo->ErrorID
@@ -120,7 +126,9 @@ void market_if::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThos
 }
 
 ///登出请求响应
-void market_if::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void market_if::OnRspUserLogout(CThostFtdcUserLogoutField *pUserLogout,
+				CThostFtdcRspInfoField *pRspInfo,
+				int nRequestID, bool bIsLast)
 {
 	LOG(INFO) << "OnRspUserLogout ...";
 }
@@ -132,7 +140,9 @@ void market_if::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, boo
 }
 
 ///订阅行情应答
-void market_if::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void market_if::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument,
+				   CThostFtdcRspInfoField *pRspInfo,
+				   int nRequestID, bool bIsLast)
 {
 	if (pRspInfo->ErrorID) {
 		LOG(FATAL) << "ErrorID: " << pRspInfo->ErrorID
@@ -143,7 +153,9 @@ void market_if::OnRspSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificI
 }
 
 ///取消订阅行情应答
-void market_if::OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void market_if::OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pSpecificInstrument,
+				     CThostFtdcRspInfoField *pRspInfo,
+				     int nRequestID, bool bIsLast)
 {
 	if (pRspInfo->ErrorID) {
 		LOG(FATAL) << "ErrorID: " << pRspInfo->ErrorID
@@ -154,13 +166,17 @@ void market_if::OnRspUnSubMarketData(CThostFtdcSpecificInstrumentField *pSpecifi
 }
 
 ///订阅询价应答
-void market_if::OnRspSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void market_if::OnRspSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument,
+				    CThostFtdcRspInfoField *pRspInfo,
+				    int nRequestID, bool bIsLast)
 {
 	LOG(INFO) << "OnRspSubForQuoteRsp ...";
 }
 
 ///取消订阅询价应答
-void market_if::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+void market_if::OnRspUnSubForQuoteRsp(CThostFtdcSpecificInstrumentField *pSpecificInstrument,
+				      CThostFtdcRspInfoField *pRspInfo,
+				      int nRequestID, bool bIsLast)
 {
 	LOG(INFO) << "OnRspUnSubForQuoteRsp ...";
 }
