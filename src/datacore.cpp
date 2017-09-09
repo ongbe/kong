@@ -11,6 +11,8 @@ typedef candlestick<1> candlestick_type;
 
 static int runflag = 1;
 static pthread_t save_thread;
+static pthread_cond_t save_cond;
+static pthread_mutex_t save_lock;
 static std::map<std::string, std::vector<tick_t>> ts;
 static pthread_mutex_t ts_lock;
 
@@ -33,8 +35,13 @@ static void save_candle(const candlestick_type &candle)
 
 static void * run_save_candles(void *)
 {
+	struct timespec now;
+
+	pthread_mutex_lock(&save_lock);
 	while (runflag) {
-		sleep(10 * 60);
+		clock_gettime(CLOCK_REALTIME, &now);
+		now.tv_sec += 60 * 10;
+		pthread_cond_timedwait(&save_cond, &save_lock, &now);
 
 		pthread_mutex_lock(&ts_lock);
 		for (auto &item : ts) {
@@ -52,6 +59,7 @@ static void * run_save_candles(void *)
 		}
 		pthread_mutex_unlock(&ts_lock);
 	}
+	pthread_mutex_unlock(&save_lock);
 
 	return NULL;
 }
@@ -142,13 +150,21 @@ void datacore_init()
 
 	// init save thread
 	pthread_create(&save_thread, NULL, run_save_candles, NULL);
+	pthread_cond_init(&save_cond, NULL);
+	pthread_mutex_init(&save_lock, NULL);
 	pthread_mutex_init(&ts_lock, NULL);
 }
 
 void datacore_fini()
 {
+	pthread_mutex_lock(&save_lock);
 	runflag = 0;
+	pthread_cond_signal(&save_cond);
+	pthread_mutex_unlock(&save_lock);
 	pthread_join(save_thread, NULL);
+
+	pthread_cond_destroy(&save_cond);
+	pthread_mutex_destroy(&save_lock);
 	pthread_mutex_destroy(&ts_lock);
 
 	sqlite3_close(db);
