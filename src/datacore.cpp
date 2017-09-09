@@ -1,61 +1,22 @@
-#include "datacore.h"
+#include "quote/quote.h"
 #include "conf.h"
-#include <cassert>
-#include <cstdio>
-#include <cstdlib>
+#include "quote/contract.h"
+#include "quote/candlestick.h"
+#include <sqlite3.h>
 #include <glog/logging.h>
 
-namespace kong {
+#include <vector>
+#include <map>
+#include <ctime>
 
-datacore::datacore(): db(NULL)
-{
-	// init sqlite
-	char sql[1024];
+typedef candlestick<1> candlestick_type;
+typedef quote<candlestick_type, std::vector<candlestick_type>> quote_type;
 
-	if (SQLITE_OK != sqlite3_open(conf.dbfile, &db)) {
-		LOG(FATAL) << sqlite3_errmsg(db);
-		exit(EXIT_FAILURE);
-	}
+sqlite3 *db;
+std::vector<quote_type> quotes;
+std::map<std::string, std::vector<tick_t>> ts;
 
-	snprintf(sql, sizeof(sql), "PRAGMA journal_mode = %s", conf.journal_mode);
-	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
-		LOG(ERROR) << sqlite3_errmsg(db);
-
-	snprintf(sql, sizeof(sql), "PRAGMA synchronous = %s", conf.synchronous);
-	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
-		LOG(ERROR) << sqlite3_errmsg(db);
-
-	// query contracts
-	char **dbresult;
-	int nrow, ncolumn;
-	if (SQLITE_OK != sqlite3_get_table(db, "SELECT name, symbol, exchange, byseason,"
-			"symbol_fmt, main_month FROM contract WHERE active = 1",
-			&dbresult, &nrow, &ncolumn, NULL)) {
-		LOG(FATAL) << sqlite3_errmsg(db);
-		exit(EXIT_FAILURE);
-	}
-
-	for (int i = 1; i < nrow; i++) {
-		struct contract con;
-		snprintf(con.name, sizeof(con.name), "%s", dbresult[i*ncolumn+0]);
-		snprintf(con.symbol, sizeof(con.symbol), "%s", dbresult[i*ncolumn+1]);
-		snprintf(con.exchange, sizeof(con.exchange), "%s", dbresult[i*ncolumn+2]);
-		con.byseason = atoi(dbresult[i*ncolumn+3]);
-		snprintf(con.symbol_fmt, sizeof(con.symbol_fmt), "%s", dbresult[i*ncolumn+4]);
-		snprintf(con.main_month, sizeof(con.main_month), "%s", dbresult[i*ncolumn+5]);
-		quotes.push_back(quote_type(con));
-	}
-}
-
-datacore::~datacore()
-{
-	if (db) {
-		sqlite3_close(db);
-		db = NULL;
-	}
-}
-
-std::vector<contract>& datacore::get_contracts()
+std::vector<contract>& get_contracts()
 {
 	static std::vector<contract> cons;
 
@@ -66,7 +27,7 @@ std::vector<contract>& datacore::get_contracts()
 	return cons;
 }
 
-void datacore::add_tick(tick_t &tick)
+void add_tick(tick_t &tick)
 {
 	// find ticktab
 	auto iter = ts.find(tick.symbol);
@@ -125,4 +86,50 @@ void datacore::add_tick(tick_t &tick)
 		LOG(ERROR) << sqlite3_errmsg(db);
 }
 
+void datacore_init()
+{
+	// init sqlite
+	char sql[1024];
+
+	if (SQLITE_OK != sqlite3_open(conf.dbfile, &db)) {
+		LOG(FATAL) << sqlite3_errmsg(db);
+		exit(EXIT_FAILURE);
+	}
+
+	snprintf(sql, sizeof(sql), "PRAGMA journal_mode = %s", conf.journal_mode);
+	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
+		LOG(ERROR) << sqlite3_errmsg(db);
+
+	snprintf(sql, sizeof(sql), "PRAGMA synchronous = %s", conf.synchronous);
+	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
+		LOG(ERROR) << sqlite3_errmsg(db);
+
+	// query contracts
+	char **dbresult;
+	int nrow, ncolumn;
+	if (SQLITE_OK != sqlite3_get_table(db, "SELECT name, symbol, exchange, byseason,"
+			"symbol_fmt, main_month FROM contract WHERE active = 1",
+			&dbresult, &nrow, &ncolumn, NULL)) {
+		LOG(FATAL) << sqlite3_errmsg(db);
+		exit(EXIT_FAILURE);
+	}
+
+	for (int i = 1; i < nrow; i++) {
+		struct contract con;
+		snprintf(con.name, sizeof(con.name), "%s", dbresult[i*ncolumn+0]);
+		snprintf(con.symbol, sizeof(con.symbol), "%s", dbresult[i*ncolumn+1]);
+		snprintf(con.exchange, sizeof(con.exchange), "%s", dbresult[i*ncolumn+2]);
+		con.byseason = atoi(dbresult[i*ncolumn+3]);
+		snprintf(con.symbol_fmt, sizeof(con.symbol_fmt), "%s", dbresult[i*ncolumn+4]);
+		snprintf(con.main_month, sizeof(con.main_month), "%s", dbresult[i*ncolumn+5]);
+		quotes.push_back(quote_type(con));
+	}
+}
+
+void datacore_fini()
+{
+	if (db) {
+		sqlite3_close(db);
+		db = NULL;
+	}
 }
