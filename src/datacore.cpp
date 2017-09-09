@@ -1,20 +1,27 @@
 #include "datacore.h"
 #include "conf.h"
 #include "quote/candlestick.h"
+#include "quote/quote.h"
 #include <sqlite3.h>
 #include <glog/logging.h>
 #include <vector>
+#include <list>
 #include <map>
 #include <pthread.h>
 
 typedef candlestick<1> candlestick_type;
+typedef quote<candlestick_type> quote_type;
 
 static int runflag = 1;
 static pthread_t save_thread;
 static pthread_cond_t save_cond;
 static pthread_mutex_t save_lock;
+
 static std::map<std::string, std::vector<tick_t>> ts;
 static pthread_mutex_t ts_lock;
+
+static std::vector<quote_type> quotes;
+static pthread_mutex_t qut_lock;
 
 static sqlite3 *db;
 
@@ -22,6 +29,14 @@ static void save_candle(const candlestick_type &candle)
 {
 	if (!candle.volume) return;
 
+	// memory
+	pthread_mutex_lock(&qut_lock);
+	for (auto &item : quotes)
+		if (strcmp(candle.symbol, item.con.symbol) == 0)
+			item.add_candle(candle);
+	pthread_mutex_unlock(&qut_lock);
+
+	// persist
 	char sql[1024];
 	snprintf(sql, sizeof(sql), "INSERT INTO candlestick(symbol, begin_time, end_time,"
 		 "open, close, high, low, avg, volume, open_interest)"
@@ -148,11 +163,17 @@ void datacore_init()
 	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 		LOG(ERROR) << sqlite3_errmsg(db);
 
+	// init quote
+	std::vector<contract>& cons = get_contracts();
+	for (auto &item : cons)
+		quotes.push_back(quote_type(item));
+
 	// init save thread
 	pthread_create(&save_thread, NULL, run_save_candles, NULL);
 	pthread_cond_init(&save_cond, NULL);
 	pthread_mutex_init(&save_lock, NULL);
 	pthread_mutex_init(&ts_lock, NULL);
+	pthread_mutex_init(&qut_lock, NULL);
 }
 
 void datacore_fini()
@@ -166,6 +187,7 @@ void datacore_fini()
 	pthread_cond_destroy(&save_cond);
 	pthread_mutex_destroy(&save_lock);
 	pthread_mutex_destroy(&ts_lock);
+	pthread_mutex_destroy(&qut_lock);
 
 	sqlite3_close(db);
 }

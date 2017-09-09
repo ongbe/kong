@@ -12,8 +12,8 @@ public:
 	typedef T candlestick_type;
 
 public:
-	quote(const struct contract &con)
-		: con(con) {}
+	quote(const struct contract &con, size_t max_capacity = 120)
+		: con(con), max_capacity(max_capacity) {}
 	~quote() {}
 
 public:
@@ -23,6 +23,9 @@ public:
 			candlestick_add(&candles.back(), &t);
 		else
 			candles.push_back(t);
+
+		if (candles.size() > max_capacity)
+			candles.erase(candles.begin() + (max_capacity/5));
 	}
 
 	template <class TQUOTE>
@@ -54,6 +57,7 @@ public:
 	struct contract con;
 private:
 	CONT candles;
+	size_t max_capacity;
 };
 
 #endif
