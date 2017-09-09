@@ -3,7 +3,7 @@
   <plugindir>./plugins</plugindir>
 
   <sqlite>
-    <dbfile>./ctp.db</dbfile>
+    <dbfile>./kong.db</dbfile>
     <journal_mode>WAL</journal_mode>
     <synchronous>NORMAL</synchronous>
   </sqlite>
