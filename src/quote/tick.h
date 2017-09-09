@@ -30,7 +30,8 @@ void tick_to_candlestick(const tick_t *tick, T *candle)
 	candle->begin_time = tick->last_time;
 	candle->end_time = tick->last_time;
 
-	candle->open = candle->close = candle->high = candle->low = candle->avg = tick->last_price;
+	candle->open = candle->close = candle->high = candle->low
+		= candle->avg = tick->last_price;
 	candle->volume = tick->last_volume;
 	candle->open_interest = tick->open_interest;
 }
@@ -49,12 +50,13 @@ void ticks_to_candlestick(InputIterator first, InputIterator last, T *result)
 	}
 }
 
-template <class T, class InputIterator>
+template <class InputIterator>
 static inline
-InputIterator find_tick_barrier(const InputIterator &first, const InputIterator &last, T*)
+InputIterator find_tick_barrier(const InputIterator &first,
+				const InputIterator &last, int period)
 {
 	for (auto iter = first; iter != last; ++iter) {
-		if (iter->last_time / T::period > first->last_time / T::period)
+		if (iter->last_time / period > first->last_time / period)
 			return iter;
 	}
 

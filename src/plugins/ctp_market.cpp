@@ -8,10 +8,11 @@
 #include <vector>
 #include <pthread.h>
 
+static int runflag = 1;
 static pthread_t upload_thread;
 static std::vector<tick_t> ticktab;
 static pthread_mutex_t tick_mutex;
-static int runflag = 1;
+
 static ctp::market_if *mif;
 
 void on_login_event(ctp::market_if *mif)
@@ -57,7 +58,7 @@ void on_tick_event(ctp::market_if *mif, const tick_t &tick)
 	pthread_mutex_unlock(&tick_mutex);
 }
 
-static void* run_upload_ticks(void *)
+static void * run_upload_ticks(void *)
 {
 	while (runflag) {
 		if (ticktab.size() == 0) {

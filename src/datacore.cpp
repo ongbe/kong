@@ -1,34 +1,65 @@
-#include "quote/quote.h"
+#include "datacore.h"
 #include "conf.h"
-#include "quote/contract.h"
 #include "quote/candlestick.h"
 #include <sqlite3.h>
 #include <glog/logging.h>
-
 #include <vector>
 #include <map>
-#include <ctime>
+#include <pthread.h>
 
 typedef candlestick<1> candlestick_type;
-typedef quote<candlestick_type, std::vector<candlestick_type>> quote_type;
 
-sqlite3 *db;
-std::vector<quote_type> quotes;
-std::map<std::string, std::vector<tick_t>> ts;
+static int runflag = 1;
+static pthread_t save_thread;
+static std::map<std::string, std::vector<tick_t>> ts;
+static pthread_mutex_t ts_lock;
 
-std::vector<contract>& get_contracts()
+static sqlite3 *db;
+
+static void save_candle(const candlestick_type &candle)
 {
-	static std::vector<contract> cons;
+	if (!candle.volume) return;
 
-	cons.clear();
-	for (auto &item : quotes)
-		cons.push_back(item.con);
+	char sql[1024];
+	snprintf(sql, sizeof(sql), "INSERT INTO candlestick(symbol, begin_time, end_time,"
+		 "open, close, high, low, avg, volume, open_interest)"
+		 " VALUES('%s', %ld, %ld, %lf, %lf, %lf, %lf, %.2lf, %ld, %ld)",
+		 candle.symbol, candle.begin_time, candle.end_time,
+		 candle.open, candle.close, candle.high, candle.low, candle.avg,
+		 candle.volume, candle.open_interest);
+	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
+		LOG(ERROR) << sqlite3_errmsg(db);
+}
 
-	return cons;
+static void * run_save_candles(void *)
+{
+	while (runflag) {
+		sleep(10 * 60);
+
+		pthread_mutex_lock(&ts_lock);
+		for (auto &item : ts) {
+			auto &ticktab = item.second;
+			while (ticktab.size() &&
+			       ticktab.front().last_time / candlestick_type::period ==
+			       ticktab.back().last_time / candlestick_type::period) {
+				auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(),
+							     candlestick_type::period);
+				candlestick_type candle;
+				ticks_to_candlestick(ticktab.begin(), cur, &candle);
+				ticktab.erase(ticktab.begin(), cur);
+				save_candle(candle);
+			}
+		}
+		pthread_mutex_unlock(&ts_lock);
+	}
+
+	return NULL;
 }
 
 void add_tick(tick_t &tick)
 {
+	pthread_mutex_lock(&ts_lock);
+
 	// find ticktab
 	auto iter = ts.find(tick.symbol);
 	if (iter == ts.end())
@@ -57,33 +88,36 @@ void add_tick(tick_t &tick)
 	// add tick
 	ticktab.push_back(tick);
 
-	// add candle
-	if (tick.last_time / candlestick_type::period ==
-	    ticktab.begin()->last_time / candlestick_type::period)
-		return;
+	pthread_mutex_unlock(&ts_lock);
+}
 
-	candlestick_type candle;
-	auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(), &candle);
-	ticks_to_candlestick(ticktab.begin(), cur, &candle);
-	ticktab.erase(ticktab.begin(), cur);
+std::vector<contract>& get_contracts()
+{
+	static std::vector<contract> cons;
+	cons.clear();
 
-	if (!candle.volume)
-		return;
+	char **dbresult;
+	int nrow, ncolumn;
+	if (SQLITE_OK != sqlite3_get_table
+	    (db, "SELECT name, symbol, exchange, byseason,"
+	     "symbol_fmt, main_month FROM contract WHERE active = 1",
+	     &dbresult, &nrow, &ncolumn, NULL)) {
+		LOG(FATAL) << sqlite3_errmsg(db);
+		exit(EXIT_FAILURE);
+	}
 
-	for (auto &item : quotes)
-		if (strcpy(candle.symbol, item.con.symbol) == 0)
-			item.add_candle(candle);
+	struct contract con;
+	for (int i = 1; i < nrow; i++) {
+		snprintf(con.name, sizeof(con.name), "%s", dbresult[i*ncolumn+0]);
+		snprintf(con.symbol, sizeof(con.symbol), "%s", dbresult[i*ncolumn+1]);
+		snprintf(con.exchange, sizeof(con.exchange), "%s", dbresult[i*ncolumn+2]);
+		con.byseason = atoi(dbresult[i*ncolumn+3]);
+		snprintf(con.symbol_fmt, sizeof(con.symbol_fmt), "%s", dbresult[i*ncolumn+4]);
+		snprintf(con.main_month, sizeof(con.main_month), "%s", dbresult[i*ncolumn+5]);
+		cons.push_back(con);
+	}
 
-	// persist candle
-	char sql[1024];
-	snprintf(sql, sizeof(sql), "INSERT INTO candlestick(symbol, begin_time, end_time,"
-		 "open, close, high, low, avg, volume, open_interest)"
-		 " VALUES('%s', %ld, %ld, %lf, %lf, %lf, %lf, %.2lf, %ld, %ld)",
-		 tick.symbol, candle.begin_time, candle.end_time,
-		 candle.open, candle.close, candle.high, candle.low, candle.avg,
-		 candle.volume, candle.open_interest);
-	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
-		LOG(ERROR) << sqlite3_errmsg(db);
+	return cons;
 }
 
 void datacore_init()
@@ -106,32 +140,16 @@ void datacore_init()
 	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 		LOG(ERROR) << sqlite3_errmsg(db);
 
-	// query contracts
-	char **dbresult;
-	int nrow, ncolumn;
-	if (SQLITE_OK != sqlite3_get_table(db, "SELECT name, symbol, exchange, byseason,"
-			"symbol_fmt, main_month FROM contract WHERE active = 1",
-			&dbresult, &nrow, &ncolumn, NULL)) {
-		LOG(FATAL) << sqlite3_errmsg(db);
-		exit(EXIT_FAILURE);
-	}
-
-	for (int i = 1; i < nrow; i++) {
-		struct contract con;
-		snprintf(con.name, sizeof(con.name), "%s", dbresult[i*ncolumn+0]);
-		snprintf(con.symbol, sizeof(con.symbol), "%s", dbresult[i*ncolumn+1]);
-		snprintf(con.exchange, sizeof(con.exchange), "%s", dbresult[i*ncolumn+2]);
-		con.byseason = atoi(dbresult[i*ncolumn+3]);
-		snprintf(con.symbol_fmt, sizeof(con.symbol_fmt), "%s", dbresult[i*ncolumn+4]);
-		snprintf(con.main_month, sizeof(con.main_month), "%s", dbresult[i*ncolumn+5]);
-		quotes.push_back(quote_type(con));
-	}
+	// init save thread
+	pthread_create(&save_thread, NULL, run_save_candles, NULL);
+	pthread_mutex_init(&ts_lock, NULL);
 }
 
 void datacore_fini()
 {
-	if (db) {
-		sqlite3_close(db);
-		db = NULL;
-	}
+	runflag = 0;
+	pthread_join(save_thread, NULL);
+	pthread_mutex_destroy(&ts_lock);
+
+	sqlite3_close(db);
 }

@@ -2,13 +2,8 @@
 #include "datacore.h"
 #include <liby/plugin.h>
 #include <glog/logging.h>
-
 #include <signal.h>
 #include <dirent.h>
-
-/*
- * plugins
- */
 
 static void plugins_init(const char *plugin_dir)
 {
@@ -41,10 +36,6 @@ static void plugins_fini()
 		unload_plugin(tmp);
 	}
 }
-
-/*
- * main
- */
 
 static void signal_handler(int sig)
 {
