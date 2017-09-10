@@ -5,7 +5,7 @@
 PREFIX?=./_install
 
 all:
-	$(MAKE) -C src all plugins
+	$(MAKE) -C src kong plugins ana
 
 clean:
 	$(MAKE) -C src clean
@@ -14,7 +14,7 @@ install: all
 	mkdir -p $(PREFIX)/lib
 	mkdir -p $(PREFIX)/log
 	mkdir -p $(PREFIX)/plugins
-	cp -a src/kong $(PREFIX)
+	cp -a src/kong src/ana $(PREFIX)
 	cp -a src/*.so lib/*.so* $(PREFIX)/lib
 	cp -a src/plugins/*.so $(PREFIX)/plugins
 	cp -a kong.sql kong.xml $(PREFIX)

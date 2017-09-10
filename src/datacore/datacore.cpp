@@ -65,7 +65,7 @@ size_t get_contracts(CONT &cont)
 	     "symbol_fmt, main_month FROM contract WHERE active = 1",
 	     &dbresult, &nrow, &ncolumn, NULL)) {
 		LOG(FATAL) << sqlite3_errmsg(db);
-		return 0;
+		exit(EXIT_FAILURE);
 	}
 
 	typename CONT::value_type con;
@@ -88,9 +88,9 @@ size_t get_candles(const char *symbol, const char *period,
 {
 	assert(cont.size() == 0);
 
-	std::stringstream sql("SELECT symbol, begin_time, end_time,"
-			      "volume, open_interest, open, close,"
-			      "high, low, avg FROM v_candlestick_");
+	std::stringstream sql;
+	sql << "SELECT symbol, begin_time, end_time, volume, open_interest,"
+		"open, close, high, low, avg FROM v_candlestick_";
 	sql << period;
 	sql << " WHERE symbol = '" << symbol << "'";
 	sql << " AND begin_time >= " << begin_time;
@@ -101,7 +101,7 @@ size_t get_candles(const char *symbol, const char *period,
 	if (SQLITE_OK != sqlite3_get_table(db, sql.str().c_str(), &dbresult,
 					   &nrow, &ncolumn, NULL)) {
 		LOG(FATAL) << sqlite3_errmsg(db);
-		return 0;
+		exit(EXIT_FAILURE);
 	}
 
 	typename CONT::value_type can;
@@ -126,38 +126,43 @@ size_t get_candles(const char *symbol, const char *period,
  * packet_parser
  */
 
-static int do_parse_subscribe(void *sess, char *buffer, size_t len)
+static int do_parse_subscribe(const char *buffer, size_t buflen,
+			      size_t packlen, void *data)
 {
-	if (len < PACK_LEN(struct pack_subscribe))
-		return 0;
-	ysock_rbuf_head((struct ysock *)sess, sizeof(struct pack_subscribe));
-
-	ysock_write((struct ysock *)sess, buffer, PACK_HDR_LEN);
+	struct ysock *sess = (struct ysock *)data;
+	ysock_rbuf_head(sess, packlen);
+	ysock_write(sess, buffer, PACK_HDR_LEN);
 	return 0;
 }
 
-static int do_parse_query_candles(void *sess, char *buffer, size_t len)
+static int do_parse_query_candles(const char *buffer, size_t buflen,
+				  size_t packlen, void *data)
 {
-	if (len < PACK_LEN(struct pack_query_candles_request))
-		return 0;
-	ysock_rbuf_head((struct ysock *)sess, PACK_LEN(struct pack_query_candles_request));
+	struct ysock *sess = (struct ysock *)data;
+
+	ysock_rbuf_head(sess, packlen);
 
 	PACK_DATA(request, buffer, struct pack_query_candles_request);
 	std::vector<candlestick_none> candles;
 	get_candles(request->symbol, request->period, request->begin_time,
 		    request->end_time, candles);
 
+	struct packhdr hdr;
+	hdr.cmd = PACK_QUERY_CANDLES;
+	ysock_write(sess, &hdr, sizeof(hdr));
 	struct pack_query_candles_response response;
 	response.nr = candles.size();
-	ysock_write((struct ysock *)sess, &response, sizeof(response));
+	ysock_write(sess, &response, sizeof(response));
 	for (auto &item : candles)
-		ysock_write((struct ysock *)sess, &item, sizeof(item));
+		ysock_write(sess, &item, sizeof(item));
 	return 0;
 }
 
 static struct packet_parser pptab[] = {
-	PACKET_PARSER_INIT(PACK_SUBSCRIBE, do_parse_subscribe),
-	PACKET_PARSER_INIT(PACK_QUERY_CANDLES, do_parse_query_candles),
+	PACKET_PARSER_INIT(PACK_SUBSCRIBE, PACK_LEN(struct pack_subscribe),
+			   do_parse_subscribe),
+	PACKET_PARSER_INIT(PACK_QUERY_CANDLES, PACK_LEN(struct pack_query_candles_request),
+			   do_parse_query_candles),
 };
 
 /*

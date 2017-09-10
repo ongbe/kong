@@ -12,44 +12,57 @@
  * socket
  */
 
-static int on_packet(struct ysock *conn)
+static int on_packet(struct ysock *ys)
 {
-	char *buffer;
+	const char *buffer;
 	size_t len;
 
-	while ((len = ysock_rbuf_get(conn, &buffer)) >= PACK_CMD_LEN) {
-		struct packet_parser *p = find_packet_parser(CONV_W(buffer));
-		if (p) {
-			p->do_parse(conn, buffer, len);
-			if (ysock_rbuf_get(conn, &buffer) == len)
-				break;
-		} else {
+	while ((len = ysock_rbuf_get(ys, &buffer)) >= PACK_CMD_LEN) {
+		struct packet_parser *pp = find_packet_parser(CONV_W(buffer));
+
+		// clear & break: find parser failed
+		if (!pp) {
 			LOG(WARNING) << "unknown packet: 0x"
 				     << std::hex << CONV_W(buffer);
-			ysock_rbuf_head(conn, len);
+			ysock_rbuf_head(ys, len);
+			break;
+		}
+
+		// break: pack-len is less than the minial length defined in paser
+		if (len < pp->len) break;
+
+		// clear & break: do-parse failed
+		if (pp->do_parse(buffer, len, pp->len, ys))
+			LOG(ERROR) << "broken packet: 0x"
+				   << std::hex << CONV_W(buffer);
+
+		// can't determine if do-parse has failed?
+		if (ysock_rbuf_get(ys, &buffer) == len) {
+			ysock_rbuf_head(ys, pp->len);
+			LOG(ERROR) << "packet-parser not head rbuf, packet: 0x"
+				   << std::hex << CONV_W(buffer);
 		}
 	}
 
 	return 0;
 }
 
-static int on_connection(struct ysock *server, struct ysock *conn)
+static void on_connection(struct ysock *server, struct ysock *conn)
 {
 	ysock_on_packet(conn, on_packet);
-	return 0;
 }
 
-static int do_parse_alive(void *sess, char *buffer, size_t len)
+static int do_parse_alive(const char *buffer, size_t buflen,
+			  size_t packlen, void *data)
 {
-	if (len >= sizeof(struct pack_alive_request)) {
-		ysock_rbuf_head((struct ysock *)sess, sizeof(struct pack_alive_request));
-		ysock_write((struct ysock *)sess, buffer, PACK_HDR_LEN);
-	}
+	struct ysock *sess = (struct ysock *)data;
+	ysock_rbuf_head(sess, packlen);
+	ysock_write(sess, buffer, packlen);
 	return 0;
 }
 
 static struct packet_parser pptab[] = {
-	PACKET_PARSER_INIT(PACK_ALIVE, do_parse_alive),
+	PACKET_PARSER_INIT(PACK_ALIVE, PACK_LEN(struct pack_alive), do_parse_alive),
 };
 
 /*

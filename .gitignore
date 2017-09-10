@@ -10,6 +10,7 @@ GRTAGS
 GPATH
 .ycm_extra_conf.py*
 kong
+ana
 
 # dir
 include/
