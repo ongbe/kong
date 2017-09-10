@@ -5,6 +5,10 @@
     <plugindir>./plugins</plugindir>
   </kong>
 
+  <ana>
+    <server>127.0.0.1</server>
+  </ana>
+
   <sqlite>
     <dbfile>./kong.db</dbfile>
     <journal_mode>WAL</journal_mode>

@@ -145,9 +145,12 @@ int main(int argc, char *argv[])
 	for (size_t i = 0; i < sizeof(pptab)/sizeof(struct packet_parser); i++)
 		register_packet_parser(&pptab[i]);
 	struct ysock client;
+	unsigned short port = htons(conf.get<unsigned short>("conf.kong.port"));
+	unsigned int ipaddr = inet_addr(conf.get<std::string>("conf.ana.server").c_str());
+	if (argc >= 2)
+		ipaddr = inet_addr(argv[1]);
 	ysock_init(&client);
-	if (ysock_connect(&client, htons(conf.get<unsigned short>("conf.kong.port")),
-			 0, on_connected) == -1)
+	if (ysock_connect(&client, port, ipaddr, on_connected) == -1)
 		exit(EXIT_FAILURE);
 	ysock_exec();
 	ysock_close(&client);
