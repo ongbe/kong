@@ -1,5 +1,5 @@
-#ifndef _CTP_MARKET_IF_H
-#define _CTP_MARKET_IF_H
+#ifndef _PLUGINS_CTP_MARKET_IF_H
+#define _PLUGINS_CTP_MARKET_IF_H
 
 #include "quote/tick.h"
 #include <string>

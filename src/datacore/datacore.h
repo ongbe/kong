@@ -1,5 +1,5 @@
-#ifndef _DATACORE_H
-#define _DATACORE_H
+#ifndef _DATACORE_DATACORE_H
+#define _DATACORE_DATACORE_H
 
 #include "quote/tick.h"
 #include "quote/contract.h"

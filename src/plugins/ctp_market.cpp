@@ -1,6 +1,6 @@
-#include "plugins/ctp_market_if.h"
-#include "conf.h"
-#include "datacore.h"
+#include "ctp_market_if.h"
+#include "datacore/conf.h"
+#include "datacore/datacore.h"
 #include <liby/plugin.h>
 
 #include <glog/logging.h>

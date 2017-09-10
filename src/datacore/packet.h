@@ -1,5 +1,5 @@
-#ifndef _PACKET_H
-#define _PACKET_H
+#ifndef _DATACORE_PACKET_H
+#define _DATACORE_PACKET_H
 
 #include "quote/candlestick.h"
 #include <stdint.h>

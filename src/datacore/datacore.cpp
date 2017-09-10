@@ -1,8 +1,8 @@
 #include "datacore.h"
 #include "conf.h"
+#include "packet.h"
 #include "quote/candlestick.h"
 #include "quote/quote.h"
-#include "packet.h"
 #include <liby/net.h>
 #include <liby/packet_parser.h>
 #include <sqlite3.h>
