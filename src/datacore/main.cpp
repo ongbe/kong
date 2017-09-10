@@ -17,7 +17,7 @@ static int on_packet(struct ysock *conn)
 	char *buffer;
 	size_t len;
 
-	while ((len = ysock_rbuf_get(conn, &buffer)) >= CMD_LEN) {
+	while ((len = ysock_rbuf_get(conn, &buffer)) >= PACK_CMD_LEN) {
 		struct packet_parser *p = find_packet_parser(CONV_W(buffer));
 		if (p) {
 			p->do_parse(conn, buffer, len);
@@ -41,9 +41,9 @@ static int on_connection(struct ysock *server, struct ysock *conn)
 
 static int do_parse_alive(void *sess, char *buffer, size_t len)
 {
-	if (len >= 26) {
-		ysock_rbuf_head((struct ysock *)sess, 26);
-		ysock_write((struct ysock *)sess, buffer, 2);
+	if (len >= sizeof(struct pack_alive_request)) {
+		ysock_rbuf_head((struct ysock *)sess, sizeof(struct pack_alive_request));
+		ysock_write((struct ysock *)sess, buffer, PACK_HDR_LEN);
 	}
 	return 0;
 }

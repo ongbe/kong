@@ -128,26 +128,30 @@ size_t get_candles(const char *symbol, const char *period,
 
 static int do_parse_subscribe(void *sess, char *buffer, size_t len)
 {
+	if (len < PACK_LEN(struct pack_subscribe))
+		return 0;
+	ysock_rbuf_head((struct ysock *)sess, sizeof(struct pack_subscribe));
+
+	ysock_write((struct ysock *)sess, buffer, PACK_HDR_LEN);
 	return 0;
 }
 
 static int do_parse_query_candles(void *sess, char *buffer, size_t len)
 {
-	if (len < PACK_LEN(struct request_query_candles))
+	if (len < PACK_LEN(struct pack_query_candles_request))
 		return 0;
+	ysock_rbuf_head((struct ysock *)sess, PACK_LEN(struct pack_query_candles_request));
 
-	PACK_DATA(request, buffer, struct request_query_candles);
+	PACK_DATA(request, buffer, struct pack_query_candles_request);
 	std::vector<candlestick_none> candles;
 	get_candles(request->symbol, request->period, request->begin_time,
 		    request->end_time, candles);
 
-	struct reponse_query_candles response;
+	struct pack_query_candles_response response;
 	response.nr = candles.size();
 	ysock_write((struct ysock *)sess, &response, sizeof(response));
 	for (auto &item : candles)
 		ysock_write((struct ysock *)sess, &item, sizeof(item));
-
-	ysock_rbuf_head((struct ysock *)sess, PACK_LEN(struct request_query_candles));
 	return 0;
 }
 

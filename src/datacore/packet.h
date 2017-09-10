@@ -2,35 +2,20 @@
 #define _DATACORE_PACKET_H
 
 #include "quote/candlestick.h"
-#include <stdint.h>
+#include <liby/packet.h>
 #include <time.h>
 
-#define CMD_LEN (sizeof(struct pack_hdr))
-#define PACK_LEN(pack_type) (CMD_LEN + sizeof(pack_type))
+#define PACK_SUBSCRIBE 0x0281
+#define PACK_PUBLISH PACK_SUBSCRIBE
+#define PACK_QUERY_CANDLES 0x0381
 
-#define PACK_HDR(hdrname, ptr) struct pack_hdr *hdrname = (struct pack_hdr*)((char*)ptr)
-#define PACK_DATA(dataname, ptr, type) type *dataname = ((type*)((char*)ptr + CMD_LEN))
+struct pack_subscribe {};
 
-#define PACK_INIT(packname, hdrname, dataname, type) \
-	char packname[CMD_LEN + sizeof(type)]; \
-	PACK_HDR(hdrname, packname); \
-	PACK_DATA(dataname, packname, type);
-
-struct pack_hdr {
-	uint16_t cmd;
-	char data[0];
-};
-
-#define PACK_ALIVE 0x0181
-#define PACK_CANDLE 0x0281
-#define PACK_SUBSCRIBE 0x0381
-#define PACK_QUERY_CANDLES 0x0382
-
-struct reponse_candle {
+struct pack_publish {
 	candlestick_none candle;
 };
 
-struct request_query_candles {
+struct pack_query_candles_request {
 	// 2017-08-31 or 2017-08-31 12:00:00
 	char symbol[CANDLESTICK_SYMBOL_LEN];
 	// minute, hour, day, week, month
@@ -39,7 +24,7 @@ struct request_query_candles {
 	time_t end_time;
 };
 
-struct reponse_query_candles {
+struct pack_query_candles_response {
 	unsigned int nr;
 	candlestick_none candle[0];
 };
