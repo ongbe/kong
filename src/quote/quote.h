@@ -28,11 +28,11 @@ public:
 			candles.erase(candles.begin() + (max_capacity/5));
 	}
 
-	template<class TQUOTE>
-	TQUOTE* duplicate()
+	template<class QUOTET>
+	QUOTET* duplicate()
 	{
-		TQUOTE *ret = new TQUOTE(con);
-		typename TQUOTE::candlestick_type result, *tmp;
+		QUOTET *ret = new QUOTET(con);
+		typename QUOTET::candlestick_type result, *tmp;
 
 		auto iter = candles.begin();
 		candlestick_convert(&(*iter), &result);
@@ -40,7 +40,7 @@ public:
 		for (; iter != candles.end(); ++iter) {
 			tmp = candlestick_convert
 				<candlestick_type,
-				 typename TQUOTE::candlestick_type>
+				 typename QUOTET::candlestick_type>
 				(&(*iter));
 			if (candlestick_period_compare(&result, tmp) == 0) {
 				candlestick_add(&result, tmp);
