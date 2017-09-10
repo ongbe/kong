@@ -2,15 +2,17 @@
 #include "conf.h"
 #include "quote/candlestick.h"
 #include "quote/quote.h"
+#include "packet.h"
+#include <liby/net.h>
+#include <liby/packet_parser.h>
 #include <sqlite3.h>
 #include <glog/logging.h>
+#include <assert.h>
 #include <vector>
 #include <list>
 #include <map>
+#include <sstream>
 #include <pthread.h>
-
-typedef candlestick<1> candlestick_type;
-typedef quote<candlestick_type> quote_type;
 
 static int runflag = 1;
 static pthread_t save_thread;
@@ -20,12 +22,17 @@ static pthread_mutex_t save_lock;
 static std::map<std::string, std::vector<tick_t>> ts;
 static pthread_mutex_t ts_lock;
 
+typedef quote<candlestick_minute> quote_type;
 static std::vector<quote_type> quotes;
 static pthread_mutex_t qut_lock;
 
 static sqlite3 *db;
 
-static void save_candle(const candlestick_type &candle)
+/*
+ * persist
+ */
+
+static void save_candle(const candlestick_minute &candle)
 {
 	if (!candle.volume) return;
 
@@ -48,6 +55,111 @@ static void save_candle(const candlestick_type &candle)
 		LOG(ERROR) << sqlite3_errmsg(db);
 }
 
+template<class CONT>
+size_t get_contracts(CONT &cont)
+{
+	char **dbresult;
+	int nrow, ncolumn;
+	if (SQLITE_OK != sqlite3_get_table
+	    (db, "SELECT name, symbol, exchange, byseason,"
+	     "symbol_fmt, main_month FROM contract WHERE active = 1",
+	     &dbresult, &nrow, &ncolumn, NULL)) {
+		LOG(FATAL) << sqlite3_errmsg(db);
+		return 0;
+	}
+
+	typename CONT::value_type con;
+	for (int i = 1; i < nrow; i++) {
+		snprintf(con.name, sizeof(con.name), "%s", dbresult[i*ncolumn+0]);
+		snprintf(con.symbol, sizeof(con.symbol), "%s", dbresult[i*ncolumn+1]);
+		snprintf(con.exchange, sizeof(con.exchange), "%s", dbresult[i*ncolumn+2]);
+		con.byseason = atoi(dbresult[i*ncolumn+3]);
+		snprintf(con.symbol_fmt, sizeof(con.symbol_fmt), "%s", dbresult[i*ncolumn+4]);
+		snprintf(con.main_month, sizeof(con.main_month), "%s", dbresult[i*ncolumn+5]);
+		cont.push_back(con);
+	}
+
+	return cont.size();
+}
+
+template<class CONT>
+size_t get_candles(const char *symbol, const char *period,
+		   time_t begin_time, time_t end_time, CONT &cont)
+{
+	assert(cont.size() == 0);
+
+	std::stringstream sql("SELECT symbol, begin_time, end_time,"
+			      "volume, open_interest, open, close,"
+			      "high, low, avg FROM v_candlestick_");
+	sql << period;
+	sql << " WHERE symbol = '" << symbol << "'";
+	sql << " AND begin_time >= " << begin_time;
+	sql << " AND end_time < " << end_time;
+
+	char **dbresult;
+	int nrow, ncolumn;
+	if (SQLITE_OK != sqlite3_get_table(db, sql.str().c_str(), &dbresult,
+					   &nrow, &ncolumn, NULL)) {
+		LOG(FATAL) << sqlite3_errmsg(db);
+		return 0;
+	}
+
+	typename CONT::value_type can;
+	for (int i = 1; i < nrow; i++) {
+		snprintf(can.symbol, sizeof(can.symbol), "%s", dbresult[i*ncolumn+0]);
+		can.begin_time = strtoul(dbresult[i*ncolumn+1], NULL, 10);
+		can.end_time = strtoul(dbresult[i*ncolumn+2], NULL, 10);
+		can.volume = strtol(dbresult[i*ncolumn+3], NULL, 10);
+		can.open_interest = strtol(dbresult[i*ncolumn+4], NULL, 10);
+		can.open = strtod(dbresult[i*ncolumn+5], NULL);
+		can.close = strtod(dbresult[i*ncolumn+6], NULL);
+		can.high = strtod(dbresult[i*ncolumn+7], NULL);
+		can.low = strtod(dbresult[i*ncolumn+8], NULL);
+		can.avg = strtod(dbresult[i*ncolumn+9], NULL);
+		cont.push_back(can);
+	}
+
+	return cont.size();
+}
+
+/*
+ * packet_parser
+ */
+
+static int do_parse_subscribe(void *sess, char *buffer, size_t len)
+{
+	return 0;
+}
+
+static int do_parse_query_candles(void *sess, char *buffer, size_t len)
+{
+	if (len < PACK_LEN(struct request_query_candles))
+		return 0;
+
+	PACK_DATA(request, buffer, struct request_query_candles);
+	std::vector<candlestick_none> candles;
+	get_candles(request->symbol, request->period, request->begin_time,
+		    request->end_time, candles);
+
+	struct reponse_query_candles response;
+	response.nr = candles.size();
+	ysock_write((struct ysock *)sess, &response, sizeof(response));
+	for (auto &item : candles)
+		ysock_write((struct ysock *)sess, &item, sizeof(item));
+
+	ysock_rbuf_head((struct ysock *)sess, PACK_LEN(struct request_query_candles));
+	return 0;
+}
+
+static struct packet_parser pptab[] = {
+	PACKET_PARSER_INIT(PACK_SUBSCRIBE, do_parse_subscribe),
+	PACKET_PARSER_INIT(PACK_QUERY_CANDLES, do_parse_query_candles),
+};
+
+/*
+ * add ticks
+ */
+
 static void * run_save_candles(void *)
 {
 	struct timespec now;
@@ -62,11 +174,11 @@ static void * run_save_candles(void *)
 		for (auto &item : ts) {
 			auto &ticktab = item.second;
 			while (ticktab.size() &&
-			       ticktab.front().last_time / candlestick_type::period ==
-			       ticktab.back().last_time / candlestick_type::period) {
+			       ticktab.front().last_time / candlestick_minute::period ==
+			       ticktab.back().last_time / candlestick_minute::period) {
 				auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(),
-							     candlestick_type::period);
-				candlestick_type candle;
+							     candlestick_minute::period);
+				candlestick_minute candle;
 				ticks_to_candlestick(ticktab.begin(), cur, &candle);
 				ticktab.erase(ticktab.begin(), cur);
 				save_candle(candle);
@@ -114,35 +226,6 @@ void add_tick(tick_t &tick)
 	pthread_mutex_unlock(&ts_lock);
 }
 
-std::vector<contract>& get_contracts()
-{
-	static std::vector<contract> cons;
-	cons.clear();
-
-	char **dbresult;
-	int nrow, ncolumn;
-	if (SQLITE_OK != sqlite3_get_table
-	    (db, "SELECT name, symbol, exchange, byseason,"
-	     "symbol_fmt, main_month FROM contract WHERE active = 1",
-	     &dbresult, &nrow, &ncolumn, NULL)) {
-		LOG(FATAL) << sqlite3_errmsg(db);
-		exit(EXIT_FAILURE);
-	}
-
-	struct contract con;
-	for (int i = 1; i < nrow; i++) {
-		snprintf(con.name, sizeof(con.name), "%s", dbresult[i*ncolumn+0]);
-		snprintf(con.symbol, sizeof(con.symbol), "%s", dbresult[i*ncolumn+1]);
-		snprintf(con.exchange, sizeof(con.exchange), "%s", dbresult[i*ncolumn+2]);
-		con.byseason = atoi(dbresult[i*ncolumn+3]);
-		snprintf(con.symbol_fmt, sizeof(con.symbol_fmt), "%s", dbresult[i*ncolumn+4]);
-		snprintf(con.main_month, sizeof(con.main_month), "%s", dbresult[i*ncolumn+5]);
-		cons.push_back(con);
-	}
-
-	return cons;
-}
-
 void datacore_init()
 {
 	// init sqlite
@@ -164,7 +247,8 @@ void datacore_init()
 		LOG(ERROR) << sqlite3_errmsg(db);
 
 	// init quote
-	std::vector<contract>& cons = get_contracts();
+	std::vector<contract> cons;
+	get_contracts(cons);
 	for (auto &item : cons)
 		quotes.push_back(quote_type(item));
 
@@ -174,10 +258,17 @@ void datacore_init()
 	pthread_mutex_init(&save_lock, NULL);
 	pthread_mutex_init(&ts_lock, NULL);
 	pthread_mutex_init(&qut_lock, NULL);
+
+	// init packet parser
+	for (size_t i = 0; i < sizeof(pptab)/sizeof(struct packet_parser); i++)
+		register_packet_parser(&pptab[i]);
 }
 
 void datacore_fini()
 {
+	for (size_t i = 0; i < sizeof(pptab)/sizeof(struct packet_parser); i++)
+		unregister_packet_parser(&pptab[i]);
+
 	pthread_mutex_lock(&save_lock);
 	runflag = 0;
 	pthread_cond_signal(&save_cond);

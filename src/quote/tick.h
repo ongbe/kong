@@ -21,7 +21,7 @@ typedef struct {
 	long day_volume;
 } tick_t;
 
-template <class T>
+template<class T>
 static inline
 void tick_to_candlestick(const tick_t *tick, T *candle)
 {
@@ -36,7 +36,7 @@ void tick_to_candlestick(const tick_t *tick, T *candle)
 	candle->open_interest = tick->open_interest;
 }
 
-template <class T, class InputIterator>
+template<class T, class InputIterator>
 static inline
 void ticks_to_candlestick(InputIterator first, InputIterator last, T *result)
 {
@@ -50,7 +50,7 @@ void ticks_to_candlestick(InputIterator first, InputIterator last, T *result)
 	}
 }
 
-template <class InputIterator>
+template<class InputIterator>
 static inline
 InputIterator find_tick_barrier(const InputIterator &first,
 				const InputIterator &last, int period)

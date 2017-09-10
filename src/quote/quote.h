@@ -6,7 +6,7 @@
 #include "quote/tick.h"
 #include <vector>
 
-template <class T, class CONT = std::vector<T>>
+template<class T, class CONT = std::vector<T>>
 class quote final {
 public:
 	typedef T candlestick_type;
@@ -28,7 +28,7 @@ public:
 			candles.erase(candles.begin() + (max_capacity/5));
 	}
 
-	template <class TQUOTE>
+	template<class TQUOTE>
 	TQUOTE* duplicate()
 	{
 		TQUOTE *ret = new TQUOTE(con);

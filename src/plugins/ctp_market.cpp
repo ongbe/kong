@@ -24,7 +24,8 @@ void on_login_event(ctp::market_if *mif)
 	// convert to real month [1 ~ 12]
 	int mon = tnow->tm_mon + 1;
 
-	std::vector<contract> tab = get_contracts();
+	std::vector<contract> tab;
+	get_contracts(tab);
 	for (auto iter = tab.begin(); iter != tab.end(); ++iter) {
 		// not clear how to deal with contracts which affected byseason
 		if (!iter->byseason)

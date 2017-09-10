@@ -52,9 +52,9 @@ INSERT INTO contract(name, symbol, exchange, byseason, active, symbol_fmt, main_
 ("PTA",  "TA", "郑州商品交易所", 1, 1, "Ymm",  "1 5 9"),
 ("动煤", "ZC", "郑州商品交易所", 1, 1, "Ymm",  "1 5 9");
 
-DROP VIEW IF EXISTS v_candlestick_min;
-CREATE VIEW v_candlestick_min AS
-	SELECT symbol,
+DROP VIEW IF EXISTS v_candlestick_minute;
+CREATE VIEW v_candlestick_minute AS
+	SELECT symbol, begin_time, end_time,
 		datetime(begin_time, 'unixepoch', 'localtime') btime,
 		datetime(end_time, 'unixepoch', 'localtime') etime,
 		volume, open_interest,
@@ -63,7 +63,7 @@ CREATE VIEW v_candlestick_min AS
 
 DROP VIEW IF EXISTS v_candlestick_hour;
 CREATE VIEW v_candlestick_hour AS
-	SELECT a.symbol,
+	SELECT a.symbol, a.begin_time, a.end_time,
 		datetime(a.begin_time, 'unixepoch', 'localtime') btime,
 		datetime(a.end_time, 'unixepoch', 'localtime') etime,
 		a.volume, c.open_interest,

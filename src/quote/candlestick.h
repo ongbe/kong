@@ -7,7 +7,7 @@
 
 #define CANDLESTICK_SYMBOL_LEN 16
 
-template <unsigned int N = 1>
+template<unsigned int N>
 struct candlestick {
 	enum { period = N*60 };
 
@@ -26,7 +26,31 @@ struct candlestick {
 	long open_interest;
 };
 
-template <class T>
+template<>
+struct candlestick<0> {
+	char symbol[CANDLESTICK_SYMBOL_LEN];
+
+	time_t begin_time;
+	time_t end_time;
+
+	double open;
+	double close;
+	double high;
+	double low;
+	double avg;
+
+	long volume;
+	long open_interest;
+};
+
+typedef candlestick<0> candlestick_none;
+typedef candlestick<1> candlestick_minute;
+typedef candlestick<60> candlestick_hour;
+typedef candlestick<24*60> candlestick_day;
+typedef candlestick<7*24*60> candlestick_week;
+typedef candlestick<30*24*60> candlestick_month;
+
+template<class T>
 static inline
 bool candlestick_check(const T *candle)
 {
@@ -38,7 +62,7 @@ bool candlestick_check(const T *candle)
 		return true;
 }
 
-template <class T>
+template<class T>
 static inline
 int candlestick_period_compare(const T *former, const T *later)
 {
@@ -48,7 +72,7 @@ int candlestick_period_compare(const T *former, const T *later)
 		return 1;
 }
 
-template <class T>
+template<class T>
 static inline
 void candlestick_add(T *former, const T *later)
 {
@@ -70,7 +94,7 @@ void candlestick_add(T *former, const T *later)
 	former->open_interest = later->open_interest;
 }
 
-template <class T>
+template<class T>
 static inline
 T candlestick_merge(const T *former, const T *later)
 {
@@ -79,14 +103,14 @@ T candlestick_merge(const T *former, const T *later)
 	return ret;
 }
 
-template <class FROM, class TO>
+template<class FROM, class TO>
 TO* candlestick_convert(FROM *t)
 {
 	assert((int)FROM::period < (int)TO::period);
 	return reinterpret_cast<TO*>(t);
 }
 
-template <class FROM, class TO>
+template<class FROM, class TO>
 void candlestick_convert(FROM *src, TO *dest)
 {
 	assert((int)FROM::period < (int)TO::period);

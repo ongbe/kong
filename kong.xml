@@ -1,6 +1,9 @@
 <conf>
-  <logdir>./log</logdir>
-  <plugindir>./plugins</plugindir>
+  <kong>
+    <port>1212</port>
+    <logdir>./log</logdir>
+    <plugindir>./plugins</plugindir>
+  </kong>
 
   <sqlite>
     <dbfile>./kong.db</dbfile>
