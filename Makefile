@@ -26,3 +26,15 @@ liby:
 
 liby-clean:
 	$(MAKE) -C thirdparty/liby uninstall PREFIX=$(PWD) CC=$(CC)
+
+sqlite:
+	mkdir -p include lib
+	cd thirdparty/sqlite && make distclean && ./configure && cd -
+	$(MAKE) -C thirdparty/sqlite
+	cp -a thirdparty/sqlite/.libs/*.so* lib
+	install -m 644 thirdparty/sqlite/*.h include
+
+sqlite-clean:
+	rm -f lib/libsqlite3.* include/sqlite3*.h
+
+.PHONY: liby liby-clean sqlite sqlite-clean
