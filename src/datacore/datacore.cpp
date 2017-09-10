@@ -26,6 +26,9 @@ typedef quote<candlestick_minute> quote_type;
 static std::vector<quote_type> quotes;
 static pthread_mutex_t qut_lock;
 
+static std::vector<struct ysock *> subscribers;
+static pthread_mutex_t sub_lock;
+
 static sqlite3 *db;
 
 /*
@@ -132,6 +135,10 @@ static int do_parse_subscribe(const char *buffer, size_t buflen,
 	struct ysock *sess = (struct ysock *)data;
 	ysock_rbuf_head(sess, packlen);
 	ysock_write(sess, buffer, PACK_HDR_LEN);
+
+	pthread_mutex_lock(&sub_lock);
+	subscribers.push_back(sess);
+	pthread_mutex_unlock(&sub_lock);
 	return 0;
 }
 
@@ -165,6 +172,23 @@ static struct packet_parser pptab[] = {
 			   do_parse_query_candles),
 };
 
+static void publish_candle(const candlestick_minute &candle)
+{
+	pthread_mutex_lock(&sub_lock);
+	for (auto iter = subscribers.begin(); iter != subscribers.end();) {
+		if (!ysock_check(*iter)) {
+			iter = subscribers.erase(iter);
+		} else {
+			struct packhdr hdr;
+			hdr.cmd = PACK_PUBLISH;
+			ysock_write(*iter, &hdr, sizeof(hdr));
+			ysock_write(*iter, &candle, sizeof(candle));
+			++iter;
+		}
+	}
+	pthread_mutex_unlock(&sub_lock);
+}
+
 /*
  * add ticks
  */
@@ -176,7 +200,7 @@ static void * run_save_candles(void *)
 	pthread_mutex_lock(&save_lock);
 	while (runflag) {
 		clock_gettime(CLOCK_REALTIME, &now);
-		now.tv_sec += 60 * 10;
+		now.tv_sec += 60 * 5;
 		pthread_cond_timedwait(&save_cond, &save_lock, &now);
 
 		pthread_mutex_lock(&ts_lock);
@@ -191,6 +215,7 @@ static void * run_save_candles(void *)
 				ticks_to_candlestick(ticktab.begin(), cur, &candle);
 				ticktab.erase(ticktab.begin(), cur);
 				save_candle(candle);
+				publish_candle(candle);
 			}
 		}
 		pthread_mutex_unlock(&ts_lock);
@@ -232,6 +257,18 @@ void add_tick(tick_t &tick)
 	// add tick
 	ticktab.push_back(tick);
 
+	// and candle
+	if (ticktab.front().last_time / candlestick_minute::period ==
+	    ticktab.back().last_time / candlestick_minute::period) {
+		auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(),
+					     candlestick_minute::period);
+		candlestick_minute candle;
+		ticks_to_candlestick(ticktab.begin(), cur, &candle);
+		ticktab.erase(ticktab.begin(), cur);
+		save_candle(candle);
+		publish_candle(candle);
+	}
+
 	pthread_mutex_unlock(&ts_lock);
 }
 
@@ -267,6 +304,7 @@ void datacore_init()
 	pthread_mutex_init(&save_lock, NULL);
 	pthread_mutex_init(&ts_lock, NULL);
 	pthread_mutex_init(&qut_lock, NULL);
+	pthread_mutex_init(&sub_lock, NULL);
 
 	// init packet parser
 	for (size_t i = 0; i < sizeof(pptab)/sizeof(struct packet_parser); i++)
@@ -288,6 +326,7 @@ void datacore_fini()
 	pthread_mutex_destroy(&save_lock);
 	pthread_mutex_destroy(&ts_lock);
 	pthread_mutex_destroy(&qut_lock);
+	pthread_mutex_destroy(&sub_lock);
 
 	sqlite3_close(db);
 }
