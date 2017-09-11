@@ -16,6 +16,7 @@ static int on_packet(struct ysock *ys)
 {
 	const char *buffer;
 	size_t len;
+	int rc;
 
 	while ((len = ysock_rbuf_get(ys, &buffer)) >= PACK_CMD_LEN) {
 		struct packet_parser *pp = find_packet_parser(CONV_W(buffer));
@@ -31,8 +32,11 @@ static int on_packet(struct ysock *ys)
 		// break: pack-len is less than the minial length defined in paser
 		if (len < pp->len) break;
 
-		// clear & break: do-parse failed
-		if (pp->do_parse(buffer, len, pp->len, ys))
+		// handle do-parse result
+		rc = pp->do_parse(buffer, len, pp->len, ys);
+		if (rc == PACKET_INCOMPLETE)
+			break;
+		else if (rc == PACKET_BROKEN)
 			LOG(ERROR) << "broken packet: 0x"
 				   << std::hex << CONV_W(buffer);
 

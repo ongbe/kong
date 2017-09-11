@@ -1,9 +1,13 @@
 #include "conf.h"
 #include "datacore/packet.h"
+#include "indicator/boll.h"
 #include <liby/net.h>
 #include <liby/packet_parser.h>
 #include <glog/logging.h>
+#include <vector>
 #include <signal.h>
+
+std::vector<boll<23>> bolls;
 
 /*
  * socket
@@ -13,6 +17,7 @@ static int on_packet(struct ysock *ys)
 {
 	const char *buffer;
 	size_t len;
+	int rc;
 
 	while ((len = ysock_rbuf_get(ys, &buffer)) >= PACK_CMD_LEN) {
 		struct packet_parser *pp = find_packet_parser(CONV_W(buffer));
@@ -28,8 +33,11 @@ static int on_packet(struct ysock *ys)
 		// break: pack-len is less than the minial length defined in paser
 		if (len < pp->len) break;
 
-		// clear & break: do-parse failed
-		if (pp->do_parse(buffer, len, pp->len, ys))
+		// handle do-parse result
+		rc = pp->do_parse(buffer, len, pp->len, ys);
+		if (rc == PACKET_INCOMPLETE)
+			break;
+		else if (rc == PACKET_BROKEN)
 			LOG(ERROR) << "broken packet: 0x"
 				   << std::hex << CONV_W(buffer);
 
@@ -53,8 +61,8 @@ static void on_connected(struct ysock *client)
 
 	hdr.cmd = PACK_QUERY_CANDLES;
 	sprintf(request.symbol, "ag1712");
-	sprintf(request.period, "hour");
-	request.begin_time = time(NULL) - 86400 * 7;
+	sprintf(request.period, "minute");
+	request.begin_time = time(NULL) - 86400;
 	request.end_time = time(NULL);
 	ysock_write(client, &hdr, sizeof(hdr));
 	ysock_write(client, &request, sizeof(request));
@@ -73,11 +81,17 @@ static int do_parse_alive(const char *buffer, size_t buflen,
 static int do_parse_query_candles_response(const char *buffer, size_t buflen,
 					   size_t packlen, void *data)
 {
-	ysock_rbuf_head((struct ysock *)data, packlen);
-
 	PACK_DATA(response, buffer, struct pack_query_candles_response);
 	char timebuf[32];
+
+	if (packlen+response->nr*sizeof(candlestick_none) > buflen)
+		return PACKET_INCOMPLETE;
+
+	ysock_rbuf_head((struct ysock *)data, packlen);
+
 	for (size_t i = 0; i < response->nr; i++) {
+		// close is standard, but I prefer avg
+		boll_append(response->candles[i].avg, bolls);
 		strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S",
 			 localtime(&response->candles[i].begin_time));
 		LOG(INFO) << "sym:" << response->candles[i].symbol
@@ -85,7 +99,11 @@ static int do_parse_query_candles_response(const char *buffer, size_t buflen,
 			  << ", vol:" << response->candles[i].volume
 			  << ", int:" << response->candles[i].open_interest
 			  << ", close:" << response->candles[i].close
-			  << ", avg:" << response->candles[i].avg;
+			  << ", avg:" << response->candles[i].avg
+			  << ", ma:" << bolls.back().ma
+			  << ", md:" << bolls.back().md
+			  << ", up:" << boll_up(bolls.back())
+			  << ", dvt:" << boll_deviate(bolls.back());
 		ysock_rbuf_head((struct ysock *)data, sizeof(response->candles[i]));
 	}
 
@@ -107,6 +125,11 @@ static int do_parse_publish(const char *buffer, size_t buflen,
 	PACK_DATA(response, buffer, struct pack_publish);
 	char timebuf[32];
 
+	if (strcmp(response->candle.symbol, "ag1712") != 0)
+		return 0;
+
+	// close is standard, but I prefer avg
+	boll_append(response->candle.avg, bolls);
 	strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S",
 		 localtime(&response->candle.begin_time));
 	LOG(INFO) << "sym:" << response->candle.symbol
@@ -114,7 +137,11 @@ static int do_parse_publish(const char *buffer, size_t buflen,
 		  << ", vol:" << response->candle.volume
 		  << ", int:" << response->candle.open_interest
 		  << ", close:" << response->candle.close
-		  << ", avg:" << response->candle.avg;
+		  << ", avg:" << response->candle.avg
+		  << ", ma:" << bolls.back().ma
+		  << ", md:" << bolls.back().md
+		  << ", up:" << boll_up(bolls.back())
+		  << ", dvt:" << boll_deviate(bolls.back());
 
 	return 0;
 }
