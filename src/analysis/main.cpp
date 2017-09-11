@@ -70,8 +70,8 @@ static int do_parse_alive(const char *buffer, size_t buflen,
 	return 0;
 }
 
-static int do_parse_query_candles(const char *buffer, size_t buflen,
-				  size_t packlen, void *data)
+static int do_parse_query_candles_response(const char *buffer, size_t buflen,
+					   size_t packlen, void *data)
 {
 	ysock_rbuf_head((struct ysock *)data, packlen);
 
@@ -89,6 +89,13 @@ static int do_parse_query_candles(const char *buffer, size_t buflen,
 		ysock_rbuf_head((struct ysock *)data, sizeof(response->candles[i]));
 	}
 
+	return 0;
+}
+
+static int do_parse_subscribe_response(const char *buffer, size_t buflen,
+				       size_t packlen, void *data)
+{
+	ysock_rbuf_head((struct ysock *)data, packlen);
 	return 0;
 }
 
@@ -114,9 +121,11 @@ static int do_parse_publish(const char *buffer, size_t buflen,
 
 static struct packet_parser pptab[] = {
 	PACKET_PARSER_INIT(PACK_ALIVE, PACK_LEN(struct pack_alive), do_parse_alive),
-	PACKET_PARSER_INIT(PACK_QUERY_CANDLES, PACK_LEN(struct pack_query_candles_response),
-			   do_parse_query_candles),
+	PACKET_PARSER_INIT(PACK_SUBSCRIBE, PACK_LEN(struct pack_subscribe_response),
+			   do_parse_subscribe_response),
 	PACKET_PARSER_INIT(PACK_PUBLISH, PACK_LEN(struct pack_publish), do_parse_publish),
+	PACKET_PARSER_INIT(PACK_QUERY_CANDLES, PACK_LEN(struct pack_query_candles_response),
+			   do_parse_query_candles_response),
 };
 
 /*

@@ -166,7 +166,7 @@ static int do_parse_query_candles(const char *buffer, size_t buflen,
 }
 
 static struct packet_parser pptab[] = {
-	PACKET_PARSER_INIT(PACK_SUBSCRIBE, PACK_LEN(struct pack_subscribe),
+	PACKET_PARSER_INIT(PACK_SUBSCRIBE, PACK_LEN(struct pack_subscribe_request),
 			   do_parse_subscribe),
 	PACKET_PARSER_INIT(PACK_QUERY_CANDLES, PACK_LEN(struct pack_query_candles_request),
 			   do_parse_query_candles),
