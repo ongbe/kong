@@ -207,7 +207,7 @@ static void * run_save_candles(void *)
 		for (auto &item : ts) {
 			auto &ticktab = item.second;
 			while (ticktab.size() &&
-			       ticktab.front().last_time / candlestick_minute::period ==
+			       ticktab.front().last_time / candlestick_minute::period !=
 			       ticktab.back().last_time / candlestick_minute::period) {
 				auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(),
 							     candlestick_minute::period);
@@ -247,7 +247,7 @@ void add_tick(tick_t &tick)
 	} else {
 		auto pre_day_volume = ticktab.rbegin()->day_volume;
 		if (tick.day_volume == pre_day_volume)
-			return;
+			goto out;
 		else if (tick.day_volume == 0)
 			tick.last_volume = 0;
 		else
@@ -258,7 +258,7 @@ void add_tick(tick_t &tick)
 	ticktab.push_back(tick);
 
 	// and candle
-	if (ticktab.front().last_time / candlestick_minute::period ==
+	if (ticktab.front().last_time / candlestick_minute::period !=
 	    ticktab.back().last_time / candlestick_minute::period) {
 		auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(),
 					     candlestick_minute::period);
@@ -269,6 +269,7 @@ void add_tick(tick_t &tick)
 		publish_candle(candle);
 	}
 
+ out:
 	pthread_mutex_unlock(&ts_lock);
 }
 
@@ -299,12 +300,12 @@ void datacore_init()
 		quotes.push_back(quote_type(item));
 
 	// init save thread
-	pthread_create(&save_thread, NULL, run_save_candles, NULL);
 	pthread_cond_init(&save_cond, NULL);
 	pthread_mutex_init(&save_lock, NULL);
 	pthread_mutex_init(&ts_lock, NULL);
 	pthread_mutex_init(&qut_lock, NULL);
 	pthread_mutex_init(&sub_lock, NULL);
+	pthread_create(&save_thread, NULL, run_save_candles, NULL);
 
 	// init packet parser
 	for (size_t i = 0; i < sizeof(pptab)/sizeof(struct packet_parser); i++)
