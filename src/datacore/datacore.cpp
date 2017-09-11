@@ -206,8 +206,9 @@ static void * run_save_candles(void *)
 		pthread_mutex_lock(&ts_lock);
 		for (auto &item : ts) {
 			auto &ticktab = item.second;
-			while (ticktab.size() && ticktab.back().last_time / candlestick_minute::period
-			       != time(NULL) / candlestick_minute::period) {
+			// 14:59:59 < 15:01:00 => span 2
+			while (ticktab.size() && ticktab.back().last_time/candlestick_minute::period
+			       < time(NULL)/candlestick_minute::period - 1) {
 				auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(),
 							     candlestick_minute::period);
 				candlestick_minute candle;
