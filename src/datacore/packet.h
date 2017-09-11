@@ -9,7 +9,9 @@
 #define PACK_PUBLISH PACK_SUBSCRIBE
 #define PACK_QUERY_CANDLES 0x0381
 
-struct pack_subscribe {};
+struct pack_subscribe {
+	char trash[0];
+} __attribute__((packed));
 
 struct pack_publish {
 	candlestick_none candle;
