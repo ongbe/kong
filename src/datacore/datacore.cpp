@@ -108,7 +108,7 @@ size_t get_candles(const char *symbol, const char *period,
 	}
 
 	typename CONT::value_type can;
-	for (int i = 1; i < nrow; i++) {
+	for (int i = 1; i < nrow+1; i++) {
 		snprintf(can.symbol, sizeof(can.symbol), "%s", dbresult[i*ncolumn+0]);
 		can.begin_time = strtoul(dbresult[i*ncolumn+1], NULL, 10);
 		can.end_time = strtoul(dbresult[i*ncolumn+2], NULL, 10);
@@ -206,9 +206,8 @@ static void * run_save_candles(void *)
 		pthread_mutex_lock(&ts_lock);
 		for (auto &item : ts) {
 			auto &ticktab = item.second;
-			while (ticktab.size() &&
-			       ticktab.front().last_time / candlestick_minute::period !=
-			       ticktab.back().last_time / candlestick_minute::period) {
+			while (ticktab.size() && ticktab.back().last_time / candlestick_minute::period
+			       != time(NULL) / candlestick_minute::period) {
 				auto cur = find_tick_barrier(ticktab.begin(), ticktab.end(),
 							     candlestick_minute::period);
 				candlestick_minute candle;
