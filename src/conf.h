@@ -1,5 +1,5 @@
-#ifndef _DATACORE_CONF_H
-#define _DATACORE_CONF_H
+#ifndef _CONF_H
+#define _CONF_H
 
 #include <boost/property_tree/ptree.hpp>
 

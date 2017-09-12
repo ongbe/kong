@@ -21,7 +21,7 @@ public:
 public:
 	void add_candle(const value_type &t)
 	{
-		if (candlestick_period_compare(&candles.back(), &t) == 0)
+		if (candles.size() && candlestick_period_compare(&candles.back(), &t) == 0)
 			candlestick_merge(&candles.back(), &t);
 		else
 			candles.push_back(t);
@@ -56,8 +56,8 @@ public:
 
 public:
 	char symbol[CANDLESTICK_SYMBOL_LEN];
-private:
 	CONT candles;
+private:
 	size_t max_capacity;
 };
 

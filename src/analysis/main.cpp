@@ -1,4 +1,6 @@
 #include "conf.h"
+#include "console.h"
+#include "utils.h"
 #include "quote/candlestick.h"
 #include "quote/quote.h"
 #include "datacore/packet.h"
@@ -7,9 +9,11 @@
 #include <glog/logging.h>
 #include <vector>
 #include <signal.h>
+#include <pthread.h>
 
 typedef quote<std::vector<candlestick_hour>> quote_type;
 static std::vector<quote_type> quotes;
+static pthread_mutex_t qut_lock;
 
 template<class T>
 static void print_candle(const T &t)
@@ -113,17 +117,20 @@ static int do_parse_query_candles_response(const char *buffer, size_t buflen,
 	for (size_t i = 0; i < response->nr; i++) {
 		auto *candle = (candlestick_hour*)(response->candles+i);
 
-		for (auto iter = quotes.begin(); iter != quotes.end(); ++iter) {
+		pthread_mutex_lock(&qut_lock);
+		auto iter = quotes.begin();
+		for (; iter != quotes.end(); ++iter) {
 			if (strcmp(candle->symbol, iter->symbol) == 0) {
 				iter->add_candle(*candle);
 				break;
-			} else if (iter == quotes.end() - 1) {
-				quote_type quote(candle->symbol);
-				quote.add_candle(*candle);
-				quotes.push_back(quote);
-				break;
 			}
 		}
+		if (iter == quotes.end()) {
+			quote_type quote(candle->symbol);
+			quote.add_candle(*candle);
+			quotes.push_back(quote);
+		}
+		pthread_mutex_unlock(&qut_lock);
 
 		ysock_rbuf_head((struct ysock *)data, sizeof(response->candles[i]));
 	}
@@ -146,17 +153,20 @@ static int do_parse_publish(const char *buffer, size_t buflen,
 	PACK_DATA(response, buffer, struct pack_publish);
 	auto *candle = (candlestick_hour*)(&response->candle);
 
-	for (auto iter = quotes.begin(); iter != quotes.end(); ++iter) {
+	pthread_mutex_lock(&qut_lock);
+	auto iter = quotes.begin();
+	for (; iter != quotes.end(); ++iter) {
 		if (strcmp(candle->symbol, iter->symbol) == 0) {
 			iter->add_candle(*candle);
 			break;
-		} else if (iter == quotes.end() - 1) {
-			quote_type quote(candle->symbol);
-			quote.add_candle(*candle);
-			quotes.push_back(quote);
-			break;
 		}
 	}
+	if (iter == quotes.end()) {
+		quote_type quote(candle->symbol);
+		quote.add_candle(*candle);
+		quotes.push_back(quote);
+	}
+	pthread_mutex_unlock(&qut_lock);
 
 	return 0;
 }
@@ -171,11 +181,96 @@ static struct packet_parser pptab[] = {
 };
 
 /*
+ * console
+ */
+
+static void on_cmd_quit(const char *line)
+{
+	raise(SIGINT);
+}
+
+static void on_cmd_info(const char *line)
+{
+	char subcmd[64];
+	if (sscanf(line, "info %s", subcmd) != 1) {
+		LOG(WARNING) << "info: syntax error";
+		return;
+	}
+	int len = strlen(subcmd) < 10 ? strlen(subcmd) : 10;
+	if (strncmp(subcmd, "connection", len) == 0)
+		LOG(INFO) << ysock_status();
+	else
+		LOG(WARNING) << "info: unknown subcmd";
+}
+
+static void on_cmd_send(const char *line)
+{
+	// FIXME: not thread-safe
+
+	char fd[64];
+	char packet[4096];
+	char buffer[4096];
+	struct ysock *conn;
+	size_t nbyte;
+
+	sscanf(line, "send %s %[^\r\n]", fd, packet);
+	conn = ysock_find_by_fd(atoi(fd));
+	if (conn) {
+		nbyte = string_to_bytes(buffer, sizeof(buffer), packet);
+		ysock_write(conn, buffer, nbyte);
+	} else {
+		LOG(WARNING) << "can't find connection " << fd << "(" << atoi(fd) << ")";
+	}
+}
+
+static void on_cmd_quote(const char *line)
+{
+	char symbol[64];
+	if (sscanf(line, "quote %s", symbol) != 1) {
+		LOG(WARNING) << "quote: syntax error";
+		return;
+	}
+
+	pthread_mutex_lock(&qut_lock);
+	for (auto iter = quotes.begin(); iter != quotes.end(); ++iter) {
+		if (strcmp(symbol, iter->symbol) == 0) {
+			for (auto &item : iter->candles)
+				print_candle(item);
+			break;
+		}
+	}
+	pthread_mutex_unlock(&qut_lock);
+}
+
+static struct command cmdtab[] = {
+	{ "help", on_cmd_help, "display the manual" },
+	{ "history", on_cmd_history, "display history of cmdtab" },
+	{ "!", on_cmd_history_exec, "!<num>" },
+	{ "quit", on_cmd_quit, "stop this server" },
+	{ "info", on_cmd_info, "info <subcmd>" },
+	{ "send", on_cmd_send, "send packet to client" },
+	{ "quote", on_cmd_quote, "print quote information" },
+	{ NULL, NULL }
+};
+
+static void* start_console(void *arg)
+{
+	console_init("ana> ");
+	for (size_t i = 0; i < sizeof(cmdtab)/sizeof(struct command); i++) {
+		if (cmdtab[i].name)
+			console_add_command(&cmdtab[i]);
+	}
+	console_run();
+	return NULL;
+}
+
+/*
  * main
  */
 
 static void signal_handler(int sig)
 {
+	console_stop();
 	ysock_stop();
 }
 
@@ -191,6 +286,11 @@ int main(int argc, char *argv[])
 	google::InitGoogleLogging(argv[0]);
 
 	signal(SIGINT, signal_handler);
+	pthread_mutex_init(&qut_lock, NULL);
+
+	// run console
+	pthread_t console_thread;
+	pthread_create(&console_thread, NULL, start_console, NULL);
 
 	// run server
 	for (size_t i = 0; i < sizeof(pptab)/sizeof(struct packet_parser); i++)
@@ -208,7 +308,11 @@ int main(int argc, char *argv[])
 	for (size_t i = 0; i < sizeof(pptab)/sizeof(struct packet_parser); i++)
 		unregister_packet_parser(&pptab[i]);
 
+	// stop console
+	pthread_join(console_thread, NULL);
+
 	// fini
+	pthread_mutex_destroy(&qut_lock);
 	google::ShutdownGoogleLogging();
 	return 0;
 }
