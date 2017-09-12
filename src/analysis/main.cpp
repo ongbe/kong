@@ -1,13 +1,35 @@
 #include "conf.h"
+#include "quote/candlestick.h"
+#include "quote/quote.h"
 #include "datacore/packet.h"
-#include "indicator/boll.h"
 #include <liby/net.h>
 #include <liby/packet_parser.h>
 #include <glog/logging.h>
 #include <vector>
 #include <signal.h>
 
-std::vector<boll<23>> bolls;
+typedef quote<std::vector<candlestick_hour>> quote_type;
+static std::vector<quote_type> quotes;
+
+template<class T>
+static void print_candle(const T &t)
+{
+	char btime[32], etime[32];
+
+	strftime(btime, sizeof(btime), "%Y-%m-%d %H:%M:%S",
+		 localtime(&t.begin_time));
+
+	strftime(etime, sizeof(etime), "%Y-%m-%d %H:%M:%S",
+		 localtime(&t.end_time));
+
+	LOG(INFO) << "sym:" << t.symbol
+		  << ", btm:" << btime
+		  << ", etm:" << etime
+		  << ", vol:" << t.volume
+		  << ", int:" << t.open_interest
+		  << ", close:" << t.close
+		  << ", avg:" << t.avg;
+}
 
 /*
  * socket
@@ -61,7 +83,7 @@ static void on_connected(struct ysock *client)
 
 	hdr.cmd = PACK_QUERY_CANDLES;
 	sprintf(request.symbol, "ag1712");
-	sprintf(request.period, "minute");
+	sprintf(request.period, "hour");
 	request.begin_time = time(NULL) - 86400;
 	request.end_time = time(NULL);
 	ysock_write(client, &hdr, sizeof(hdr));
@@ -82,7 +104,6 @@ static int do_parse_query_candles_response(const char *buffer, size_t buflen,
 					   size_t packlen, void *data)
 {
 	PACK_DATA(response, buffer, struct pack_query_candles_response);
-	char timebuf[32];
 
 	if (packlen+response->nr*sizeof(candlestick_none) > buflen)
 		return PACKET_INCOMPLETE;
@@ -90,20 +111,20 @@ static int do_parse_query_candles_response(const char *buffer, size_t buflen,
 	ysock_rbuf_head((struct ysock *)data, packlen);
 
 	for (size_t i = 0; i < response->nr; i++) {
-		// close is standard, but I prefer avg
-		boll_append(response->candles[i].avg, bolls);
-		strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S",
-			 localtime(&response->candles[i].begin_time));
-		LOG(INFO) << "sym:" << response->candles[i].symbol
-			  << ", btm:" << timebuf
-			  << ", vol:" << response->candles[i].volume
-			  << ", int:" << response->candles[i].open_interest
-			  << ", close:" << response->candles[i].close
-			  << ", avg:" << response->candles[i].avg
-			  << ", ma:" << bolls.back().ma
-			  << ", md:" << bolls.back().md
-			  << ", up:" << boll_up(bolls.back())
-			  << ", dvt:" << boll_deviate(bolls.back());
+		auto *candle = (candlestick_hour*)(response->candles+i);
+
+		for (auto iter = quotes.begin(); iter != quotes.end(); ++iter) {
+			if (strcmp(candle->symbol, iter->symbol) == 0) {
+				iter->add_candle(*candle);
+				break;
+			} else if (iter == quotes.end() - 1) {
+				quote_type quote(candle->symbol);
+				quote.add_candle(*candle);
+				quotes.push_back(quote);
+				break;
+			}
+		}
+
 		ysock_rbuf_head((struct ysock *)data, sizeof(response->candles[i]));
 	}
 
@@ -123,25 +144,19 @@ static int do_parse_publish(const char *buffer, size_t buflen,
 	ysock_rbuf_head((struct ysock *)data, packlen);
 
 	PACK_DATA(response, buffer, struct pack_publish);
-	char timebuf[32];
+	auto *candle = (candlestick_hour*)(&response->candle);
 
-	if (strcmp(response->candle.symbol, "ag1712") != 0)
-		return 0;
-
-	// close is standard, but I prefer avg
-	boll_append(response->candle.avg, bolls);
-	strftime(timebuf, sizeof(timebuf), "%Y-%m-%d %H:%M:%S",
-		 localtime(&response->candle.begin_time));
-	LOG(INFO) << "sym:" << response->candle.symbol
-		  << ", btm:" << timebuf
-		  << ", vol:" << response->candle.volume
-		  << ", int:" << response->candle.open_interest
-		  << ", close:" << response->candle.close
-		  << ", avg:" << response->candle.avg
-		  << ", ma:" << bolls.back().ma
-		  << ", md:" << bolls.back().md
-		  << ", up:" << boll_up(bolls.back())
-		  << ", dvt:" << boll_deviate(bolls.back());
+	for (auto iter = quotes.begin(); iter != quotes.end(); ++iter) {
+		if (strcmp(candle->symbol, iter->symbol) == 0) {
+			iter->add_candle(*candle);
+			break;
+		} else if (iter == quotes.end() - 1) {
+			quote_type quote(candle->symbol);
+			quote.add_candle(*candle);
+			quotes.push_back(quote);
+			break;
+		}
+	}
 
 	return 0;
 }

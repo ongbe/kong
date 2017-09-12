@@ -22,10 +22,6 @@ static pthread_mutex_t save_lock;
 static std::map<std::string, std::vector<tick_t>> ts;
 static pthread_mutex_t ts_lock;
 
-typedef quote<candlestick_minute> quote_type;
-static std::vector<quote_type> quotes;
-static pthread_mutex_t qut_lock;
-
 static std::vector<struct ysock *> subscribers;
 static pthread_mutex_t sub_lock;
 
@@ -38,13 +34,6 @@ static sqlite3 *db;
 static void save_candle(const candlestick_minute &candle)
 {
 	if (!candle.volume) return;
-
-	// memory
-	pthread_mutex_lock(&qut_lock);
-	for (auto &item : quotes)
-		if (strcmp(candle.symbol, item.con.symbol) == 0)
-			item.add_candle(candle);
-	pthread_mutex_unlock(&qut_lock);
 
 	// persist
 	char sql[1024];
@@ -293,17 +282,10 @@ void datacore_init()
 	if (SQLITE_OK != sqlite3_exec(db, sql, NULL, NULL, NULL))
 		LOG(ERROR) << sqlite3_errmsg(db);
 
-	// init quote
-	std::vector<contract> cons;
-	get_contracts(cons);
-	for (auto &item : cons)
-		quotes.push_back(quote_type(item));
-
 	// init save thread
 	pthread_cond_init(&save_cond, NULL);
 	pthread_mutex_init(&save_lock, NULL);
 	pthread_mutex_init(&ts_lock, NULL);
-	pthread_mutex_init(&qut_lock, NULL);
 	pthread_mutex_init(&sub_lock, NULL);
 	pthread_create(&save_thread, NULL, run_save_candles, NULL);
 
@@ -326,7 +308,6 @@ void datacore_fini()
 	pthread_cond_destroy(&save_cond);
 	pthread_mutex_destroy(&save_lock);
 	pthread_mutex_destroy(&ts_lock);
-	pthread_mutex_destroy(&qut_lock);
 	pthread_mutex_destroy(&sub_lock);
 
 	sqlite3_close(db);

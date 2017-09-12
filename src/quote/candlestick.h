@@ -66,15 +66,17 @@ template<class T>
 static inline
 int candlestick_period_compare(const T *former, const T *later)
 {
-	if (former->begin_time / T::period == later->begin_time / T::period)
+	if (former->begin_time/T::period == later->begin_time/T::period)
 		return 0;
-	else
+	else if (former->begin_time/T::period > later->begin_time/T::period)
 		return 1;
+	else
+		return -1;
 }
 
 template<class T1, class T2>
 static inline
-void candlestick_add(T1 *former, const T2 *later)
+void candlestick_merge(T1 *former, const T2 *later)
 {
 	assert(strncmp(former->symbol, later->symbol, sizeof(former->symbol)) == 0);
 	assert(candlestick_check(former));
@@ -93,15 +95,6 @@ void candlestick_add(T1 *former, const T2 *later)
 		/ (former->volume + later->volume);
 	former->volume += later->volume;
 	former->open_interest = later->open_interest;
-}
-
-template<class T>
-static inline
-T candlestick_merge(const T *former, const T *later)
-{
-	T ret = *former;
-	candlestick_add(&ret, later);
-	return ret;
 }
 
 template<class FROM, class TO>
