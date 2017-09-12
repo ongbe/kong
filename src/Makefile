@@ -2,7 +2,7 @@
 ## Code & Maintenance by yon2kong <yon2kong@gmail.com>
 ##
 
-CPPFLAGS = -Wall -Werror -std=gnu++11 -I. -I../include -DCTP_FIX_CLOSE_TIME
+CPPFLAGS = -Wall -Werror -std=gnu++11 -I. -I../include -DCTP_FIX_CLOSE_TIME -DCTP_FIX_CALL_AUCTION
 LDFLAGS = -L../lib -lboost_date_time -lsqlite3 -lglog -ly
 
 all: kong
