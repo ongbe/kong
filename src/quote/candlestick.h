@@ -72,15 +72,16 @@ int candlestick_period_compare(const T *former, const T *later)
 		return 1;
 }
 
-template<class T>
+template<class T1, class T2>
 static inline
-void candlestick_add(T *former, const T *later)
+void candlestick_add(T1 *former, const T2 *later)
 {
 	assert(strncmp(former->symbol, later->symbol, sizeof(former->symbol)) == 0);
 	assert(candlestick_check(former));
 	assert(candlestick_check(later));
 	assert(former->end_time <= later->begin_time);
-	assert(candlestick_period_compare(former, later) == 0);
+	assert(T1::period >= T2::period);
+	assert(former->begin_time / T1::period == later->begin_time / T1::period);
 
 	former->end_time = later->end_time;
 	former->close = later->close;
