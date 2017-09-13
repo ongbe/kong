@@ -3,13 +3,9 @@
 
 #include "quote/tick.h"
 #include "quote/contract.h"
+#include <vector>
 
-template<class CONT>
-size_t get_contracts(CONT &cont);
-
-template<class CONT>
-size_t get_candles(const char *symbol, const char *period,
-		   time_t begin_time, time_t end_time, CONT &cont);
+size_t get_contracts(std::vector<contract> &cont);
 
 void add_tick(tick_t &tick);
 

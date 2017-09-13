@@ -47,8 +47,7 @@ static void save_candle(const candlestick_minute &candle)
 		LOG(ERROR) << sqlite3_errmsg(db);
 }
 
-template<class CONT>
-size_t get_contracts(CONT &cont)
+size_t get_contracts(std::vector<contract> &cont)
 {
 	char **dbresult;
 	int nrow, ncolumn;
@@ -60,7 +59,7 @@ size_t get_contracts(CONT &cont)
 		exit(EXIT_FAILURE);
 	}
 
-	typename CONT::value_type con;
+	contract con;
 	for (int i = 1; i < nrow; i++) {
 		snprintf(con.name, sizeof(con.name), "%s", dbresult[i*ncolumn+0]);
 		snprintf(con.symbol, sizeof(con.symbol), "%s", dbresult[i*ncolumn+1]);
