@@ -117,16 +117,25 @@ size_t get_candles(const char *symbol, const char *period,
  * packet_parser
  */
 
-static int do_parse_subscribe(const char *buffer, size_t buflen,
-			      size_t packlen, void *data)
+static int do_parse_query_contracts(const char *buffer, size_t buflen,
+				  size_t packlen, void *data)
 {
 	struct ysock *sess = (struct ysock *)data;
-	ysock_rbuf_head(sess, packlen);
-	ysock_write(sess, buffer, PACK_HDR_LEN);
 
-	pthread_mutex_lock(&sub_lock);
-	subscribers.push_back(sess);
-	pthread_mutex_unlock(&sub_lock);
+	ysock_rbuf_head(sess, packlen);
+
+	//PACK_DATA(request, buffer, struct pack_query_contracts_request);
+	std::vector<contract> contracts;
+	get_contracts(contracts);
+
+	struct packhdr hdr;
+	hdr.cmd = PACK_QUERY_CONTRACTS;
+	ysock_write(sess, &hdr, sizeof(hdr));
+	struct pack_query_contracts_response response;
+	response.nr = contracts.size();
+	ysock_write(sess, &response, sizeof(response));
+	for (auto &item : contracts)
+		ysock_write(sess, &item, sizeof(item));
 	return 0;
 }
 
@@ -153,11 +162,26 @@ static int do_parse_query_candles(const char *buffer, size_t buflen,
 	return 0;
 }
 
+static int do_parse_subscribe(const char *buffer, size_t buflen,
+			      size_t packlen, void *data)
+{
+	struct ysock *sess = (struct ysock *)data;
+	ysock_rbuf_head(sess, packlen);
+	ysock_write(sess, buffer, PACK_HDR_LEN);
+
+	pthread_mutex_lock(&sub_lock);
+	subscribers.push_back(sess);
+	pthread_mutex_unlock(&sub_lock);
+	return 0;
+}
+
 static struct packet_parser pptab[] = {
-	PACKET_PARSER_INIT(PACK_SUBSCRIBE, PACK_LEN(struct pack_subscribe_request),
-			   do_parse_subscribe),
+	PACKET_PARSER_INIT(PACK_QUERY_CONTRACTS, PACK_LEN(struct pack_query_contracts_request),
+			   do_parse_query_contracts),
 	PACKET_PARSER_INIT(PACK_QUERY_CANDLES, PACK_LEN(struct pack_query_candles_request),
 			   do_parse_query_candles),
+	PACKET_PARSER_INIT(PACK_SUBSCRIBE, PACK_LEN(struct pack_subscribe_request),
+			   do_parse_subscribe),
 };
 
 static void publish_candle(const candlestick_minute &candle)
@@ -202,8 +226,13 @@ static void * run_save_candles(void *)
 				candlestick_minute candle;
 				ticks_to_candlestick(ticktab.begin(), cur, &candle);
 				ticktab.erase(ticktab.begin(), cur);
-				save_candle(candle);
+
+				/*
+				 * CAUTION: must call publish before save, otherwise the subscribers
+				 * will recieve candles by qeury that always contain this candle
+				 */
 				publish_candle(candle);
+				save_candle(candle);
 			}
 		}
 		pthread_mutex_unlock(&ts_lock);
@@ -253,8 +282,13 @@ void add_tick(tick_t &tick)
 		candlestick_minute candle;
 		ticks_to_candlestick(ticktab.begin(), cur, &candle);
 		ticktab.erase(ticktab.begin(), cur);
-		save_candle(candle);
+
+		/*
+		 * CAUTION: must call publish before save, otherwise the subscribers
+		 * will recieve candles by qeury that always contain this candle
+		 */
 		publish_candle(candle);
+		save_candle(candle);
 	}
 
  out:

@@ -7,6 +7,7 @@
 #include <liby/net.h>
 #include <liby/packet_parser.h>
 #include <glog/logging.h>
+#include <boost/algorithm/string.hpp>
 #include <vector>
 #include <signal.h>
 #include <pthread.h>
@@ -83,24 +84,71 @@ static void on_connected(struct ysock *client)
 	ysock_on_packet(client, on_packet);
 
 	struct packhdr hdr;
-	struct pack_query_candles_request request;
-
-	hdr.cmd = PACK_QUERY_CANDLES;
-	sprintf(request.symbol, "ag1712");
-	sprintf(request.period, "hour");
-	request.begin_time = time(NULL) - 86400;
-	request.end_time = time(NULL);
+	struct pack_query_contracts_request request;
+	hdr.cmd = PACK_QUERY_CONTRACTS;
 	ysock_write(client, &hdr, sizeof(hdr));
-	ysock_write(client, &request, sizeof(request));
-
-	hdr.cmd = PACK_SUBSCRIBE;
-	ysock_write(client, &hdr, sizeof(hdr));
+	ysock_write(client, &request, sizeof(pack_query_contracts_request));
 }
 
 static int do_parse_alive(const char *buffer, size_t buflen,
 			  size_t packlen, void *data)
 {
 	ysock_rbuf_head((struct ysock *)data, packlen);
+	return 0;
+}
+
+static int do_parse_query_contracts_response(const char *buffer, size_t buflen,
+					     size_t packlen, void *data)
+{
+	PACK_DATA(response, buffer, struct pack_query_contracts_response);
+
+	if (packlen+response->nr*sizeof(struct contract) > buflen)
+		return PACKET_INCOMPLETE;
+
+	ysock_rbuf_head((struct ysock *)data, packlen);
+
+	struct ysock *client = (struct ysock *)data;
+	struct packhdr hdr;
+	struct pack_query_candles_request request;
+
+	time_t now = time(NULL);
+	struct tm *tnow = localtime(&now);
+	// convert to real year
+	int year = tnow->tm_year + 1900;
+	// convert to real month [1 ~ 12]
+	int mon = tnow->tm_mon + 1;
+	std::vector<std::string> values;
+
+	for (size_t i = 0; i < response->nr; i++) {
+		struct contract *con = response->contracts + i;
+
+		hdr.cmd = PACK_QUERY_CANDLES;
+		sprintf(request.period, "hour");
+		request.begin_time = time(NULL) - 86400;
+		request.end_time = time(NULL);
+
+		boost::split(values, con->main_month, boost::is_any_of(" "));
+		for (size_t i = 0; i < values.size(); i++) {
+			if (mon >= atoi(values[i].c_str()))
+				year++;
+
+			if (strcmp(con->symbol_fmt, "Ymm") == 0)
+				year %= 10;
+			else
+				year %= 100;
+
+			snprintf(request.symbol, sizeof(request.symbol), "%s%d%02d",  con->symbol,
+				 year, atoi(values[i].c_str()));
+			year = tnow->tm_year + 1900;
+
+			// write wbuf
+			ysock_write(client, &hdr, sizeof(hdr));
+			ysock_write(client, &request, sizeof(request));
+			// head rbuf
+			ysock_rbuf_head(client, sizeof(*con));
+		}
+	}
+
 	return 0;
 }
 
@@ -134,6 +182,13 @@ static int do_parse_query_candles_response(const char *buffer, size_t buflen,
 
 		ysock_rbuf_head((struct ysock *)data, sizeof(response->candles[i]));
 	}
+
+	struct ysock *client = (struct ysock *)data;
+	struct packhdr hdr;
+	struct pack_subscribe_request request;
+	hdr.cmd = PACK_SUBSCRIBE;
+	ysock_write(client, &hdr, sizeof(hdr));
+	ysock_write(client, &request, sizeof(pack_subscribe_request));
 
 	return 0;
 }
@@ -173,11 +228,13 @@ static int do_parse_publish(const char *buffer, size_t buflen,
 
 static struct packet_parser pptab[] = {
 	PACKET_PARSER_INIT(PACK_ALIVE, PACK_LEN(struct pack_alive), do_parse_alive),
+	PACKET_PARSER_INIT(PACK_QUERY_CONTRACTS, PACK_LEN(struct pack_query_contracts_response),
+			   do_parse_query_contracts_response),
+	PACKET_PARSER_INIT(PACK_QUERY_CANDLES, PACK_LEN(struct pack_query_candles_response),
+			   do_parse_query_candles_response),
 	PACKET_PARSER_INIT(PACK_SUBSCRIBE, PACK_LEN(struct pack_subscribe_response),
 			   do_parse_subscribe_response),
 	PACKET_PARSER_INIT(PACK_PUBLISH, PACK_LEN(struct pack_publish), do_parse_publish),
-	PACKET_PARSER_INIT(PACK_QUERY_CANDLES, PACK_LEN(struct pack_query_candles_response),
-			   do_parse_query_candles_response),
 };
 
 /*

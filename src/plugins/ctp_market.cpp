@@ -23,6 +23,8 @@ void on_login_event(ctp::market_if *mif)
 	int year = tnow->tm_year + 1900;
 	// convert to real month [1 ~ 12]
 	int mon = tnow->tm_mon + 1;
+	char buf[256];
+	std::vector<std::string> values;
 
 	std::vector<contract> tab;
 	get_contracts(tab);
@@ -31,10 +33,7 @@ void on_login_event(ctp::market_if *mif)
 		if (!iter->byseason)
 			continue;
 
-		char buf[256];
-		std::vector<std::string> values;
 		boost::split(values, iter->main_month, boost::is_any_of(" "));
-
 		for (size_t i = 0; i < values.size(); i++) {
 			if (mon >= atoi(values[i].c_str()))
 				year++;
