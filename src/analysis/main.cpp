@@ -9,12 +9,16 @@
 #include <glog/logging.h>
 #include <boost/algorithm/string.hpp>
 #include <vector>
+#include <map>
 #include <signal.h>
 #include <pthread.h>
 
 typedef quote<std::vector<candlestick_hour>> quote_type;
 static std::vector<quote_type> quotes;
 static pthread_mutex_t qut_lock;
+
+static std::map<int, quebuf_t *> cmdque;
+static pthread_mutex_t cmdque_lock;
 
 template<class T>
 static void print_candle(const T &t)
@@ -42,6 +46,20 @@ static void print_candle(const T &t)
 
 static void on_idle(struct ysock *ys)
 {
+	// send cmdque
+	for (auto &item : cmdque) {
+		struct ysock *conn;
+		conn = ysock_find_by_fd(item.first);
+		if (conn)
+			ysock_write(conn, quebuf_rawbuf_out_pos(item.second),
+				    quebuf_size(item.second));
+		else
+			LOG(WARNING) << "can't find connection " << item.first;
+		quebuf_delete(item.second);
+	}
+	cmdque.clear();
+
+	// keep alive
 	static time_t alive = time(NULL);
 
 	if (time(NULL) - alive < 60)
@@ -279,22 +297,19 @@ static void on_cmd_info(const char *line)
 
 static void on_cmd_send(const char *line)
 {
-	// FIXME: not thread-safe
-
 	char fd[64];
 	char packet[4096];
 	char buffer[4096];
-	struct ysock *conn;
 	size_t nbyte;
 
 	sscanf(line, "send %s %[^\r\n]", fd, packet);
-	conn = ysock_find_by_fd(atoi(fd));
-	if (conn) {
-		nbyte = string_to_bytes(buffer, sizeof(buffer), packet);
-		ysock_write(conn, buffer, nbyte);
-	} else {
-		LOG(WARNING) << "can't find connection " << fd << "(" << atoi(fd) << ")";
-	}
+	nbyte = string_to_bytes(buffer, sizeof(buffer), packet);
+	quebuf_t *qb = quebuf_new(nbyte);
+	quebuf_write(qb, buffer, nbyte);
+	pthread_mutex_lock(&cmdque_lock);
+	cmdque.insert(std::make_pair(atoi(fd), qb));
+	pthread_mutex_unlock(&cmdque_lock);
+
 }
 
 static void on_cmd_quote(const char *line)
@@ -327,7 +342,7 @@ static struct command cmdtab[] = {
 	{ NULL, NULL }
 };
 
-static void* start_console(void *arg)
+static void * start_console(void *arg)
 {
 	console_init("ana> ");
 	for (size_t i = 0; i < sizeof(cmdtab)/sizeof(struct command); i++) {
@@ -363,6 +378,7 @@ int main(int argc, char *argv[])
 
 	signal(SIGINT, signal_handler);
 	pthread_mutex_init(&qut_lock, NULL);
+	pthread_mutex_init(&cmdque_lock, NULL);
 
 	// run console
 	pthread_t console_thread;
@@ -389,6 +405,7 @@ int main(int argc, char *argv[])
 
 	// fini
 	pthread_mutex_destroy(&qut_lock);
+	pthread_mutex_destroy(&cmdque_lock);
 	google::ShutdownGoogleLogging();
 	return 0;
 }
