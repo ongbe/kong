@@ -10,6 +10,7 @@
 #include <boost/algorithm/string.hpp>
 #include <vector>
 #include <map>
+#include <algorithm>
 #include <signal.h>
 #include <pthread.h>
 
@@ -323,8 +324,8 @@ static void on_cmd_quote(const char *line)
 	pthread_mutex_lock(&qut_lock);
 	for (auto iter = quotes.begin(); iter != quotes.end(); ++iter) {
 		if (strcmp(symbol, iter->symbol) == 0) {
-			for (auto &item : iter->candles)
-				print_candle(item);
+			for_each(iter->candles.begin(), iter->candles.end(),
+				 print_candle<candlestick_hour>);
 			break;
 		}
 	}

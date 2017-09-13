@@ -97,17 +97,17 @@ void candlestick_merge(T1 *former, const T2 *later)
 	former->open_interest = later->open_interest;
 }
 
-template<class FROM, class TO>
-TO* candlestick_convert(FROM *t)
+template<class TO, class FROM>
+TO * candlestick_convert(FROM *t)
 {
-	assert((int)FROM::period < (int)TO::period);
+	assert((int)TO::period >= (int)FROM::period);
 	return reinterpret_cast<TO*>(t);
 }
 
-template<class FROM, class TO>
-void candlestick_convert(FROM *src, TO *dest)
+template<class TO, class FROM>
+void candlestick_convert(TO *src, FROM *dest)
 {
-	assert((int)FROM::period < (int)TO::period);
+	assert((int)TO::period >= (int)FROM::period);
 	*dest = *(reinterpret_cast<TO*>(src));
 }
 

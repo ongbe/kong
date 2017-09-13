@@ -188,6 +188,8 @@ static struct packet_parser pptab[] = {
 
 static void publish_candle(const candlestick_minute &candle)
 {
+	if (!candle.volume) return;
+
 	pthread_mutex_lock(&sub_lock);
 	for (auto iter = subscribers.begin(); iter != subscribers.end();) {
 		if (!ysock_check(*iter)) {

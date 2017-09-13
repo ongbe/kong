@@ -37,7 +37,7 @@ public:
 		typename QUOTET::value_type result, *tmp;
 
 		auto iter = candles.begin();
-		candlestick_convert(&(*iter), &result);
+		candlestick_convert(&result, &(*iter));
 		iter++;
 		for (; iter != candles.end(); ++iter) {
 			tmp = candlestick_convert
