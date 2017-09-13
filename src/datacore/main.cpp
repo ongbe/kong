@@ -111,7 +111,8 @@ static void plugins_fini()
 
 static void signal_handler(int sig)
 {
-	ysock_stop();
+	if (sig == SIGINT)
+		ysock_stop();
 }
 
 int main(int argc, char *argv[])

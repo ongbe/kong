@@ -40,6 +40,22 @@ static void print_candle(const T &t)
  * socket
  */
 
+static void on_idle(struct ysock *ys)
+{
+	static time_t alive = time(NULL);
+
+	if (time(NULL) - alive < 60)
+		return;
+
+	alive = time(NULL);
+
+	struct packhdr hdr;
+	struct pack_alive request;
+	hdr.cmd = PACK_ALIVE;
+	ysock_write(ys, &hdr, sizeof(hdr));
+	ysock_write(ys, &request, sizeof(request));
+}
+
 static int on_packet(struct ysock *ys)
 {
 	const char *buffer;
@@ -81,13 +97,14 @@ static int on_packet(struct ysock *ys)
 
 static void on_connected(struct ysock *client)
 {
+	ysock_on_idle(client, on_idle);
 	ysock_on_packet(client, on_packet);
 
 	struct packhdr hdr;
 	struct pack_query_contracts_request request;
 	hdr.cmd = PACK_QUERY_CONTRACTS;
 	ysock_write(client, &hdr, sizeof(hdr));
-	ysock_write(client, &request, sizeof(pack_query_contracts_request));
+	ysock_write(client, &request, sizeof(request));
 }
 
 static int do_parse_alive(const char *buffer, size_t buflen,
@@ -188,7 +205,7 @@ static int do_parse_query_candles_response(const char *buffer, size_t buflen,
 	struct pack_subscribe_request request;
 	hdr.cmd = PACK_SUBSCRIBE;
 	ysock_write(client, &hdr, sizeof(hdr));
-	ysock_write(client, &request, sizeof(pack_subscribe_request));
+	ysock_write(client, &request, sizeof(request));
 
 	return 0;
 }
@@ -327,8 +344,10 @@ static void* start_console(void *arg)
 
 static void signal_handler(int sig)
 {
-	console_stop();
-	ysock_stop();
+	if (sig == SIGINT) {
+		console_stop();
+		ysock_stop();
+	}
 }
 
 int main(int argc, char *argv[])
