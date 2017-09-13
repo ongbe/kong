@@ -170,7 +170,9 @@ static int do_parse_subscribe(const char *buffer, size_t buflen,
 	ysock_write(sess, buffer, PACK_HDR_LEN);
 
 	pthread_mutex_lock(&sub_lock);
-	subscribers.push_back(sess);
+	auto iter = find(subscribers.begin(), subscribers.end(), sess);
+	if (iter == subscribers.end())
+		subscribers.push_back(sess);
 	pthread_mutex_unlock(&sub_lock);
 	return 0;
 }
