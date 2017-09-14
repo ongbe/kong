@@ -306,18 +306,16 @@ static void on_cmd_quote(const char *line)
 	for (auto iter = quotes.begin(); iter != quotes.end(); ++iter) {
 		if (strcmp(symbol, iter->symbol) == 0) {
 			auto qclose = iter->get_close();
-			std::vector<double> mid;
-			MA(mid, qclose, 23);
-			std::vector<double> md;
-			STD(md, qclose, 23);
-
-			int nr = 0;
+			int nr = 1;
 			for (auto &item : iter->candles) {
-				LOG(INFO) << item
-					  << ", ma:" << mid[nr]
-					  << ", up:" << (md[nr] == 0 ? 0 : item.close + 2*md[nr])
-					  << ", down:" << (md[nr] == 0 ? 0 : item.close - 2*md[nr]);
+				double mid = MA(qclose.rend()-nr, qclose.rend(), 23);
+				double md = STD(qclose.rend()-nr, qclose.rend(), 23);
 				nr++;
+
+				LOG(INFO) << item
+					  << ", ma:" << mid
+					  << ", up:" << (md == 0 ? 0 : item.close + 2*md)
+					  << ", down:" << (md == 0 ? 0 : item.close - 2*md);
 			}
 			break;
 		}

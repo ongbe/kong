@@ -3,7 +3,9 @@
 
 #include <math.h>
 #include <iterator>
+#include <algorithm>
 
+#ifdef DEPRECATED_INDICATOR
 template<class InputIterator>
 static inline
 typename std::iterator_traits<InputIterator>::value_type
@@ -75,6 +77,49 @@ void STD(DESTCONT &dest, const SRCCONT &src, size_t nr)
 		else
 			dest.push_back(standard_deviation(iter-nr, iter+1, *iter_mid));
 	}
+}
+#endif
+
+template<class InputIterator>
+static inline
+typename std::iterator_traits<InputIterator>::value_type
+MA(InputIterator first, InputIterator last,
+   typename std::iterator_traits<InputIterator>::difference_type nr)
+{
+	assert(nr > 0);
+	typedef typename std::iterator_traits<InputIterator>::value_type value_type;
+	typedef typename std::iterator_traits<InputIterator>::difference_type difference_type;
+
+	value_type ret(0);
+	difference_type diff = std::count_if(first, last, [] (value_type &) {return true;});
+
+	if (diff < nr)
+		return ret;
+
+	for (difference_type i(0); i < nr; ++i, ++first)
+		ret += *first;
+	return ret / nr;
+}
+
+template<class InputIterator>
+static inline
+typename std::iterator_traits<InputIterator>::value_type
+STD(InputIterator first, InputIterator last,
+    typename std::iterator_traits<InputIterator>::difference_type nr)
+{
+	assert(nr != 0);
+	typedef typename std::iterator_traits<InputIterator>::value_type value_type;
+	typedef typename std::iterator_traits<InputIterator>::difference_type difference_type;
+
+	value_type ret(0);
+	value_type ma = MA(first, last, nr);
+
+	if (ma == 0)
+		return ret;
+
+	for (difference_type i(0); i < nr; ++i, ++first)
+		ret += pow(*first - ma, 2);
+	return sqrt(ret / nr);
 }
 
 #endif
