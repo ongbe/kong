@@ -1,7 +1,7 @@
 #include "ctp_market_if.h"
-#include <cctype>
-#include <cstring>
-#include <ctime>
+#include <ctype.h>
+#include <string.h>
+#include <time.h>
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <glog/logging.h>

@@ -3,6 +3,7 @@
 #include "utils.h"
 #include "quote/candlestick.h"
 #include "quote/quote.h"
+#include "quote/indicator.h"
 #include "datacore/packet.h"
 #include <liby/net.h>
 #include <liby/packet_parser.h>
@@ -14,32 +15,12 @@
 #include <signal.h>
 #include <pthread.h>
 
-typedef quote<std::vector<candlestick_hour>> quote_type;
+typedef quote<std::vector<candlestick_hour>, std::vector<double>> quote_type;
 static std::vector<quote_type> quotes;
 static pthread_mutex_t qut_lock;
 
 static std::map<int, quebuf_t *> cmdque;
 static pthread_mutex_t cmdque_lock;
-
-template<class T>
-static void print_candle(const T &t)
-{
-	char btime[32], etime[32];
-
-	strftime(btime, sizeof(btime), "%Y-%m-%d %H:%M:%S",
-		 localtime(&t.begin_time));
-
-	strftime(etime, sizeof(etime), "%Y-%m-%d %H:%M:%S",
-		 localtime(&t.end_time));
-
-	LOG(INFO) << "sym:" << t.symbol
-		  << ", btm:" << btime
-		  << ", etm:" << etime
-		  << ", vol:" << t.volume
-		  << ", int:" << t.open_interest
-		  << ", close:" << t.close
-		  << ", avg:" << t.avg;
-}
 
 /*
  * socket
@@ -324,8 +305,20 @@ static void on_cmd_quote(const char *line)
 	pthread_mutex_lock(&qut_lock);
 	for (auto iter = quotes.begin(); iter != quotes.end(); ++iter) {
 		if (strcmp(symbol, iter->symbol) == 0) {
-			for_each(iter->candles.begin(), iter->candles.end(),
-				 print_candle<candlestick_hour>);
+			auto qclose = iter->get_close();
+			std::vector<double> mid;
+			MA(mid, qclose, 23);
+			std::vector<double> md;
+			STD(md, qclose, 23);
+
+			int nr = 0;
+			for (auto &item : iter->candles) {
+				LOG(INFO) << item
+					  << ", ma:" << mid[nr]
+					  << ", up:" << item.close + 2*md[nr]
+					  << ", down:" << item.close - 2*md[nr];
+				nr++;
+			}
 			break;
 		}
 	}

@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <string.h>
 #include <time.h>
+#include <ostream>
 
 #define CANDLESTICK_SYMBOL_LEN 16
 
@@ -52,11 +53,11 @@ typedef candlestick<30*24*60> candlestick_month;
 
 template<class T>
 static inline
-bool candlestick_check(const T &candle)
+bool candlestick_check(const T &t)
 {
-	if (candle.begin_time > candle.end_time)
+	if (t.begin_time > t.end_time)
 		return false;
-	else if (candle.begin_time/T::period != candle.end_time/T::period)
+	else if (t.begin_time/T::period != t.end_time/T::period)
 		return false;
 	else
 		return true;
@@ -113,6 +114,28 @@ struct candlestick<N1> operator+(const struct candlestick<N1> &former,
 	return ret;
 }
 
+template<unsigned int N>
+std::ostream & operator<<(std::ostream &os, const struct candlestick<N> &t)
+{
+	char btime[32], etime[32];
+
+	strftime(btime, sizeof(btime), "%Y-%m-%d %H:%M:%S",
+		 localtime(&t.begin_time));
+
+	strftime(etime, sizeof(etime), "%Y-%m-%d %H:%M:%S",
+		 localtime(&t.end_time));
+
+	os << "sym:" << t.symbol
+	   << ", btm:" << btime
+	   << ", etm:" << etime
+	   << ", vol:" << t.volume
+	   << ", int:" << t.open_interest
+	   << ", close:" << t.close
+	   << ", avg:" << t.avg;
+
+	return os;
+}
+
 template<class TO, class FROM>
 TO * candlestick_convert(FROM *t)
 {
@@ -121,7 +144,7 @@ TO * candlestick_convert(FROM *t)
 }
 
 template<class TO, class FROM>
-void candlestick_convert(TO *src, FROM *dest)
+void candlestick_convert(TO *dest, FROM *src)
 {
 	assert((int)TO::period >= (int)FROM::period);
 	*dest = *(reinterpret_cast<TO*>(src));

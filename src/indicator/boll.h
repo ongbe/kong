@@ -1,7 +1,7 @@
 #ifndef _INDICATOR_BOLL_H
 #define _INDICATOR_BOLL_H
 
-#include <cmath>
+#include <math.h>
 
 template <int N1, int N2 = 2>
 struct boll {
