@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <string.h>
 #include <time.h>
-#include <ostream>
+#include <iostream>
 
 #define CANDLESTICK_SYMBOL_LEN 16
 
@@ -86,6 +86,10 @@ struct candlestick<N1> & operator+=(struct candlestick<N1> &former,
 	assert(strncmp(former.symbol, later.symbol, sizeof(former.symbol)) == 0);
 	assert(candlestick_check(former));
 	assert(candlestick_check(later));
+	if (former.end_time > later.begin_time) {
+		std::cerr << former << std::endl;
+		std::cerr << later << std::endl;
+	}
 	assert(former.end_time <= later.begin_time);
 	assert(T1::period >= T2::period);
 	assert(former.begin_time / T1::period == later.begin_time / T1::period);
