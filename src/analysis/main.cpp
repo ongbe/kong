@@ -315,8 +315,8 @@ static void on_cmd_quote(const char *line)
 			for (auto &item : iter->candles) {
 				LOG(INFO) << item
 					  << ", ma:" << mid[nr]
-					  << ", up:" << item.close + 2*md[nr]
-					  << ", down:" << item.close - 2*md[nr];
+					  << ", up:" << (md[nr] == 0 ? 0 : item.close + 2*md[nr])
+					  << ", down:" << (md[nr] == 0 ? 0 : item.close - 2*md[nr]);
 				nr++;
 			}
 			break;
