@@ -21,8 +21,8 @@ public:
 public:
 	void add_candle(const value_type &t)
 	{
-		if (candles.size() && candlestick_period_compare(&candles.back(), &t) == 0)
-			candlestick_merge(&candles.back(), &t);
+		if (candles.size() && candlestick_period_compare(candles.back(), t) == 0)
+			candles.back() += t;
 		else
 			candles.push_back(t);
 
@@ -43,8 +43,8 @@ public:
 			tmp = candlestick_convert
 				<value_type, typename QUOTET::value_type>
 				(&(*iter));
-			if (candlestick_period_compare(&result, tmp) == 0) {
-				candlestick_merge(&result, tmp);
+			if (candlestick_period_compare(result, *tmp) == 0) {
+				result += *tmp;
 			} else {
 				ret->add_candle(result);
 				result = *tmp;

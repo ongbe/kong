@@ -46,7 +46,7 @@ void ticks_to_candlestick(InputIterator first, InputIterator last, T *result)
 
 	while (++first != last) {
 		tick_to_candlestick(&(*first), &candle);
-		candlestick_merge(result, &candle);
+		*result += candle;
 	}
 }
 

@@ -52,11 +52,11 @@ typedef candlestick<30*24*60> candlestick_month;
 
 template<class T>
 static inline
-bool candlestick_check(const T *candle)
+bool candlestick_check(const T &candle)
 {
-	if (candle->begin_time > candle->end_time)
+	if (candle.begin_time > candle.end_time)
 		return false;
-	else if (candle->begin_time/T::period != candle->end_time/T::period)
+	else if (candle.begin_time/T::period != candle.end_time/T::period)
 		return false;
 	else
 		return true;
@@ -64,37 +64,53 @@ bool candlestick_check(const T *candle)
 
 template<class T>
 static inline
-int candlestick_period_compare(const T *former, const T *later)
+int candlestick_period_compare(const T &former, const T &later)
 {
-	if (former->begin_time/T::period == later->begin_time/T::period)
+	if (former.begin_time/T::period == later.begin_time/T::period)
 		return 0;
-	else if (former->begin_time/T::period > later->begin_time/T::period)
+	else if (former.begin_time/T::period > later.begin_time/T::period)
 		return 1;
 	else
 		return -1;
 }
 
-template<class T1, class T2>
+template<unsigned int N1, unsigned int N2>
 static inline
-void candlestick_merge(T1 *former, const T2 *later)
+struct candlestick<N1> & operator+=(struct candlestick<N1> &former,
+				    const struct candlestick<N2> &later)
 {
-	assert(strncmp(former->symbol, later->symbol, sizeof(former->symbol)) == 0);
+	typedef struct candlestick<N1> T1;
+	typedef struct candlestick<N2> T2;
+
+	assert(strncmp(former.symbol, later.symbol, sizeof(former.symbol)) == 0);
 	assert(candlestick_check(former));
 	assert(candlestick_check(later));
-	assert(former->end_time <= later->begin_time);
+	assert(former.end_time <= later.begin_time);
 	assert(T1::period >= T2::period);
-	assert(former->begin_time / T1::period == later->begin_time / T1::period);
+	assert(former.begin_time / T1::period == later.begin_time / T1::period);
 
-	former->end_time = later->end_time;
-	former->close = later->close;
-	if (former->high < later->high)
-		former->high = later->high;
-	if (former->low > later->low)
-		former->low = later->low;
-	former->avg = (former->avg * former->volume + later->close * later->volume)
-		/ (former->volume + later->volume);
-	former->volume += later->volume;
-	former->open_interest = later->open_interest;
+	former.end_time = later.end_time;
+	former.close = later.close;
+	if (former.high < later.high)
+		former.high = later.high;
+	if (former.low > later.low)
+		former.low = later.low;
+	former.avg = (former.avg * former.volume + later.close * later.volume)
+		/ (former.volume + later.volume);
+	former.volume += later.volume;
+	former.open_interest = later.open_interest;
+
+	return former;
+}
+
+template<unsigned int N1, unsigned int N2>
+static inline
+struct candlestick<N1> operator+(const struct candlestick<N1> &former,
+				 const struct candlestick<N2> &later)
+{
+	struct candlestick<N1> ret(former);
+	ret += later;
+	return ret;
 }
 
 template<class TO, class FROM>
