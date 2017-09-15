@@ -12,6 +12,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <math.h>
 #include <signal.h>
 #include <pthread.h>
 
@@ -306,16 +307,34 @@ static void on_cmd_quote(const char *line)
 	for (auto iter = quotes.begin(); iter != quotes.end(); ++iter) {
 		if (strcmp(symbol, iter->symbol) == 0) {
 			auto qclose = iter->get_close();
+
+			std::vector<double> aa;
+			aa.push_back(0);
+			for (auto iter = qclose.begin()+1; iter != qclose.end(); ++iter)
+				aa.push_back(std::max(*iter - *(iter-1), 0.0));
+
+			std::vector<double> ab;
+			ab.push_back(0);
+			for (auto iter = qclose.begin()+1; iter != qclose.end(); ++iter)
+				ab.push_back(fabs(*iter - *(iter-1)));
+
 			int nr = 1;
 			for (auto &item : iter->candles) {
-				double mid = MA(qclose.rend()-nr, qclose.rend(), 23);
-				double md = STD(qclose.rend()-nr, qclose.rend(), 23);
+				auto mid = MA(qclose.rend()-nr, qclose.rend(), 23);
+				auto md = STD(qclose.rend()-nr, qclose.rend(), 23);
+				auto _ac = EMA(aa.rend()-nr, aa.rend(), 9);
+				auto _ad = EMA(ab.rend()-nr, ab.rend(), 9);
+				auto rsi = 100*_ac;
+				if (!_ad)
+					rsi = 0;
+				else
+					rsi /= _ad;
 				nr++;
 
 				LOG(INFO) << item
 					  << ", ma:" << mid
-					  << ", up:" << (md == 0 ? 0 : item.close + 2*md)
-					  << ", down:" << (md == 0 ? 0 : item.close - 2*md);
+					  << ", dvt:" << (md == 0 ? 0 : (item.close-mid)/md)
+					  << ", rsi:" << rsi;
 			}
 			break;
 		}
