@@ -322,8 +322,8 @@ static void on_cmd_quote(const char *line)
 			for (auto &item : iter->candles) {
 				auto mid = MA(qclose.rend()-nr, qclose.rend(), 23);
 				auto md = STD(qclose.rend()-nr, qclose.rend(), 23);
-				auto _ac = EMA(aa.rend()-nr, aa.rend(), 9);
-				auto _ad = EMA(ab.rend()-nr, ab.rend(), 9);
+				auto _ac = EMA(aa.rend()-nr, aa.rend(), 23);
+				auto _ad = EMA(ab.rend()-nr, ab.rend(), 23);
 				auto rsi = 100*_ac;
 				if (!_ad)
 					rsi = 0;
@@ -333,7 +333,7 @@ static void on_cmd_quote(const char *line)
 
 				LOG(INFO) << item
 					  << ", ma:" << mid
-					  << ", dvt:" << (md == 0 ? 0 : (item.close-mid)/md)
+					  << ", dvt:" << (md == 0 ? 0 : (item.close-mid)/md/2)
 					  << ", rsi:" << rsi;
 			}
 			break;
