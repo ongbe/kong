@@ -95,7 +95,12 @@ void console_run()
 {
 	while (console.state) {
 		char *line = readline(console.prompt);
-		if (line == NULL) break;
+
+		if (line == NULL)
+			break;
+
+		if (!strlen(line))
+			continue;
 
 		add_history(line);
 		process_command(line);
