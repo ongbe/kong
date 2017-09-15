@@ -17,15 +17,14 @@ double average(InputIterator first, InputIterator last, int nr)
 }
 
 template<class InputIterator>
-double weighted_average(InputIterator first, InputIterator last,
-			int nr, double weight)
+double weighted_average(InputIterator first, InputIterator last, double weight)
 {
-	assert(nr > 0 && first != last);
+	assert(first != last);
 
-	if (nr == 1 || first+1 == last)
+	if (first+1 == last)
 		return *first;
 
-	return weight*(*first) + (1-weight)*weighted_average(++first, last, nr-1, weight);
+	return weight*(*first) + (1-weight)*weighted_average(++first, last, weight);
 }
 
 template<class InputIterator>
@@ -52,7 +51,7 @@ static inline
 typename std::iterator_traits<InputIterator>::value_type
 EMA(InputIterator first, InputIterator last, int nr)
 {
-	return weighted_average(first, last, nr, 2.0/(nr+1));
+	return weighted_average(first, last, 2.0/(nr+1));
 }
 
 template<class InputIterator>
