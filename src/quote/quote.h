@@ -75,7 +75,7 @@ public:
 		iter++;
 		for (; iter != candles.end(); ++iter) {
 			tmp = candlestick_convert
-				<value_type, typename QUOTET::value_type>
+				<typename QUOTET::value_type, value_type>
 				(&(*iter));
 			if (candlestick_period_compare(result, *tmp) == 0) {
 				result += *tmp;
