@@ -2,9 +2,9 @@
 ## Code & Maintenance by yon2kong <yon2kong@gmail.com>
 ##
 
-CFLAGS = -Wall -Werror -std=gnu99 -I. -I../include
-CPPFLAGS = -Wall -Werror -std=gnu++11 -I. -I../include -DCTP_FIX_CLOSE_TIME -DCTP_FIX_CALL_AUCTION
-LDFLAGS = -L../lib -lpthread -lboost_date_time -lsqlite3 -lglog -ly
+CFLAGS = -Wall -O2 -std=gnu99 -I. -I../include
+CPPFLAGS = -Wall -O2 -std=gnu++11 -I. -I../include -DCTP_FIX_CLOSE_TIME -DCTP_FIX_CALL_AUCTION
+LDFLAGS = -L../lib -lpthread -lsqlite3 -lglog -ly
 
 all: kong
 

@@ -52,6 +52,22 @@ typedef candlestick<7*24*60> candlestick_week;
 typedef candlestick<30*24*60> candlestick_month;
 
 template<class T>
+struct is_candlestick_none_type {
+	enum { value = false };
+};
+
+template<>
+struct is_candlestick_none_type<candlestick_none> {
+	enum { value = true };
+};
+
+template<class T>
+bool is_candlestick_none(const T &t)
+{
+	return is_candlestick_none_type<T>::value;
+}
+
+template<class T>
 static inline
 bool candlestick_check(const T &t)
 {

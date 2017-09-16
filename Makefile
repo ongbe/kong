@@ -7,6 +7,10 @@ PREFIX?=./_install
 all:
 	$(MAKE) -C src kong plugins ana
 
+# convenient for macosx
+ana:
+	$(MAKE) -C src ana
+
 clean:
 	$(MAKE) -C src clean
 

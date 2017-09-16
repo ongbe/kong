@@ -404,8 +404,11 @@ int main(int argc, char *argv[])
 	if (argc >= 2)
 		ipaddr = inet_addr(argv[1]);
 	ysock_init(&client);
-	if (ysock_connect(&client, port, ipaddr, on_connected) == -1)
+	if (ysock_connect(&client, port, ipaddr, on_connected) == -1) {
+		LOG(FATAL) << "connect to " << inet_ntoa(*((struct in_addr *)&ipaddr))
+			   << ":" << ntohs(port) << " failed!";
 		exit(EXIT_FAILURE);
+	}
 	ysock_exec();
 	ysock_close(&client);
 	for (size_t i = 0; i < sizeof(pptab)/sizeof(struct packet_parser); i++)
