@@ -1,6 +1,20 @@
 -- ctp.sql
 
-CREATE TABLE IF NOT EXISTS candlestick(
+CREATE TABLE IF NOT EXISTS candlestick_munite(
+	id            INTEGER PRIMARY KEY,
+	symbol        CHAR(16) NOT NULL,
+	begin_time    BIGINT NOT NULL,
+	end_time      BIGINT NOT NULL,
+	open          DOUBLE NOT NULL,
+	close         DOUBLE NOT NULL,
+	high          DOUBLE NOT NULL,
+	low           DOUBLE NOT NULL,
+	avg           DOUBLE NOT NULL,
+	volume        BIGINT NOT NULL,
+	open_interest BIGINT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS candlestick_day(
 	id            INTEGER PRIMARY KEY,
 	symbol        CHAR(16) NOT NULL,
 	begin_time    BIGINT NOT NULL,
@@ -52,6 +66,7 @@ INSERT INTO contract(name, symbol, exchange, byseason, active, symbol_fmt, main_
 ("PTA",  "TA", "郑州商品交易所", 1, 1, "Ymm",  "1 5 9"),
 ("动煤", "ZC", "郑州商品交易所", 1, 1, "Ymm",  "1 5 9");
 
+-- for now, only futures have minute and hour
 DROP VIEW IF EXISTS v_candlestick_minute;
 CREATE VIEW v_candlestick_minute AS
 	SELECT symbol, begin_time, end_time,
@@ -59,7 +74,7 @@ CREATE VIEW v_candlestick_minute AS
 		datetime(end_time, 'unixepoch', 'localtime') etime,
 		volume, open_interest,
 		open, close, high, low, avg
-	FROM candlestick;
+	FROM candlestick_minute;
 
 DROP VIEW IF EXISTS v_candlestick_hour;
 CREATE VIEW v_candlestick_hour AS
@@ -72,9 +87,19 @@ CREATE VIEW v_candlestick_hour AS
 	(SELECT symbol, min(begin_time) begin_time, max(end_time) end_time,
 	sum(volume) volume,
 	max(high) high, min(low) low, round(sum(volume*avg)/sum(volume), 2) avg
-	FROM candlestick
+	FROM candlestick_minute
 	GROUP BY symbol, begin_time / 3600) as a
-	LEFT JOIN candlestick b
+	LEFT JOIN candlestick_minute b
 	ON a.symbol = b.symbol AND a.begin_time = b.begin_time
-	LEFT JOIN candlestick c
+	LEFT JOIN candlestick_minute c
 	ON a.symbol = c.symbol AND a.end_time = c.end_time;
+
+-- for now, only stock have day
+DROP VIEW IF EXISTS v_candlestick_day;
+CREATE VIEW v_candlestick_day AS
+	SELECT symbol, begin_time, end_time,
+		datetime(begin_time, 'unixepoch', 'localtime') btime,
+		datetime(end_time, 'unixepoch', 'localtime') etime,
+		volume, open_interest,
+		open, close, high, low, avg
+	FROM candlestick_day;

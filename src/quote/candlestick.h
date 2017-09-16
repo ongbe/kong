@@ -8,6 +8,29 @@
 
 #define CANDLESTICK_SYMBOL_LEN 16
 
+#define CANDLESTICK_PERIOD_MINUTE 60
+#define CANDLESTICK_PERIOD_HOUR (60*60)
+#define CANDLESTICK_PERIOD_DAY (60*60*24)
+#define CANDLESTICK_PERIOD_WEEK (60*60*24*7)
+#define CANDLESTICK_PERIOD_MONTH (60*60*24*30)
+
+static inline
+const char * CANDLESTICK_PERIOD_NAME(time_t period)
+{
+	if (period == CANDLESTICK_PERIOD_MINUTE)
+		return "minute";
+	else if (period == CANDLESTICK_PERIOD_HOUR)
+		return "hour";
+	else if (period == CANDLESTICK_PERIOD_DAY)
+		return "day";
+	else if (period == CANDLESTICK_PERIOD_WEEK)
+		return "week";
+	else if (period == CANDLESTICK_PERIOD_MONTH)
+		return "month";
+	else
+		return "unknown";
+}
+
 template<unsigned int N>
 struct candlestick {
 	enum { period = N*60 };
@@ -45,11 +68,11 @@ struct candlestick<0> {
 };
 
 typedef candlestick<0> candlestick_none;
-typedef candlestick<1> candlestick_minute;
-typedef candlestick<60> candlestick_hour;
-typedef candlestick<24*60> candlestick_day;
-typedef candlestick<7*24*60> candlestick_week;
-typedef candlestick<30*24*60> candlestick_month;
+typedef candlestick<CANDLESTICK_PERIOD_MINUTE/60> candlestick_minute;
+typedef candlestick<CANDLESTICK_PERIOD_HOUR/60> candlestick_hour;
+typedef candlestick<CANDLESTICK_PERIOD_DAY/60> candlestick_day;
+typedef candlestick<CANDLESTICK_PERIOD_WEEK/60> candlestick_week;
+typedef candlestick<CANDLESTICK_PERIOD_MONTH/60> candlestick_month;
 
 template<class T>
 struct is_candlestick_none_type {

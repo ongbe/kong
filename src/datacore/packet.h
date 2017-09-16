@@ -23,13 +23,13 @@ struct pack_query_contracts_response {
 struct pack_query_candles_request {
 	// 2017-08-31 or 2017-08-31 12:00:00
 	char symbol[CANDLESTICK_SYMBOL_LEN];
-	// minute, hour, day, week, month
-	char period[7];
+	time_t period;
 	time_t begin_time;
 	time_t end_time;
 } __attribute__((packed));
 
 struct pack_query_candles_response {
+	time_t period;
 	unsigned int nr;
 	candlestick_none candles[0];
 } __attribute__((packed));
@@ -43,6 +43,7 @@ struct pack_subscribe_response {
 } __attribute__((packed));
 
 struct pack_publish {
+	time_t period;
 	candlestick_none candle;
 } __attribute__((packed));
 

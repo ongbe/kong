@@ -141,7 +141,7 @@ static int do_parse_query_contracts_response(const char *buffer, size_t buflen,
 		struct contract *con = response->contracts + i;
 
 		hdr.cmd = PACK_QUERY_CANDLES;
-		sprintf(request.period, "hour");
+		request.period = CANDLESTICK_PERIOD_HOUR;
 		request.begin_time = time(NULL) - 86400;
 		request.end_time = time(NULL);
 

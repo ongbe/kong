@@ -7,11 +7,11 @@
 #include <liby/packet_parser.h>
 #include <sqlite3.h>
 #include <glog/logging.h>
-#include <assert.h>
 #include <vector>
 #include <list>
 #include <map>
 #include <sstream>
+#include <assert.h>
 #include <pthread.h>
 
 static int runflag = 1;
@@ -31,15 +31,17 @@ static sqlite3 *db;
  * persist
  */
 
-static void save_candle(const candlestick_minute &candle)
+template<class T>
+static void save_candle(const T &candle)
 {
 	if (!candle.volume) return;
 
 	// persist
 	char sql[1024];
-	snprintf(sql, sizeof(sql), "INSERT INTO candlestick(symbol, begin_time, end_time,"
+	snprintf(sql, sizeof(sql), "INSERT INTO candlestick_%s(symbol, begin_time, end_time,"
 		 "open, close, high, low, avg, volume, open_interest)"
 		 " VALUES('%s', %ld, %ld, %lf, %lf, %lf, %lf, %.2lf, %ld, %ld)",
+		 CANDLESTICK_PERIOD_NAME(T::period),
 		 candle.symbol, candle.begin_time, candle.end_time,
 		 candle.open, candle.close, candle.high, candle.low, candle.avg,
 		 candle.volume, candle.open_interest);
@@ -74,26 +76,24 @@ size_t get_contracts(std::vector<contract> &cont)
 }
 
 template<class CONT>
-size_t get_candles(const char *symbol, const char *period,
+size_t get_candles(const char *symbol, time_t period,
 		   time_t begin_time, time_t end_time, CONT &cont)
 {
 	assert(cont.size() == 0);
 
 	std::stringstream sql;
 	sql << "SELECT symbol, begin_time, end_time, volume, open_interest,"
-		"open, close, high, low, avg FROM v_candlestick_";
-	sql << period;
-	sql << " WHERE symbol = '" << symbol << "'";
-	sql << " AND begin_time >= " << begin_time;
-	sql << " AND end_time < " << end_time;
+		"open, close, high, low, avg FROM v_candlestick_"
+	    << CANDLESTICK_PERIOD_NAME(period)
+	    << " WHERE symbol = '" << symbol << "'"
+	    << " AND begin_time >= " << begin_time
+	    << " AND end_time < " << end_time;
 
 	char **dbresult;
 	int nrow, ncolumn;
 	if (SQLITE_OK != sqlite3_get_table(db, sql.str().c_str(), &dbresult,
-					   &nrow, &ncolumn, NULL)) {
-		LOG(FATAL) << sqlite3_errmsg(db);
-		exit(EXIT_FAILURE);
-	}
+					   &nrow, &ncolumn, NULL))
+		LOG(ERROR) << sqlite3_errmsg(db);
 
 	typename CONT::value_type can;
 	for (int i = 1; i < nrow+1; i++) {
@@ -155,6 +155,7 @@ static int do_parse_query_candles(const char *buffer, size_t buflen,
 	hdr.cmd = PACK_QUERY_CANDLES;
 	ysock_write(sess, &hdr, sizeof(hdr));
 	struct pack_query_candles_response response;
+	response.period = request->period;
 	response.nr = candles.size();
 	ysock_write(sess, &response, sizeof(response));
 	for (auto &item : candles)
@@ -186,7 +187,8 @@ static struct packet_parser pptab[] = {
 			   do_parse_subscribe),
 };
 
-static void publish_candle(const candlestick_minute &candle)
+template<class T>
+static void publish_candle(const T &candle)
 {
 	if (!candle.volume) return;
 
@@ -196,9 +198,11 @@ static void publish_candle(const candlestick_minute &candle)
 			iter = subscribers.erase(iter);
 		} else {
 			struct packhdr hdr;
+			struct pack_publish publish;
 			hdr.cmd = PACK_PUBLISH;
+			publish.period = T::period;
 			ysock_write(*iter, &hdr, sizeof(hdr));
-			ysock_write(*iter, &candle, sizeof(candle));
+			ysock_write(*iter, &publish, sizeof(publish));
 			++iter;
 		}
 	}
