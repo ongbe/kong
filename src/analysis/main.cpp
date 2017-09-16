@@ -142,7 +142,7 @@ static int do_parse_query_contracts_response(const char *buffer, size_t buflen,
 
 		hdr.cmd = PACK_QUERY_CANDLES;
 		request.period = CANDLESTICK_PERIOD_HOUR;
-		request.begin_time = time(NULL) - 86400;
+		request.begin_time = time(NULL) - CANDLESTICK_PERIOD_MONTH;
 		request.end_time = time(NULL);
 
 		boost::split(values, con->main_month, boost::is_any_of(" "));
@@ -320,8 +320,7 @@ static void on_cmd_quote(const char *line)
 
 			int nr = 1;
 			for (auto &item : iter->candles) {
-				auto mid = MA(qclose.rend()-nr, qclose.rend(), 23);
-				auto ema = EMA(qclose.rend()-nr, qclose.rend(), 23);
+				auto mid = EMA(qclose.rend()-nr, qclose.rend(), 23);
 				auto md = STD(qclose.rend()-nr, qclose.rend(), 23);
 				auto _ac = EMA(aa.rend()-nr, aa.rend(), 9);
 				auto _ad = EMA(ab.rend()-nr, ab.rend(), 9);
@@ -333,7 +332,7 @@ static void on_cmd_quote(const char *line)
 				nr++;
 
 				LOG(INFO) << item
-					  << ", ema:" << ema
+					  << ", mid:" << mid
 					  << ", dvt:" << (md == 0 ? 0 : (item.close-mid)/md/2)
 					  << ", rsi:" << rsi;
 			}
