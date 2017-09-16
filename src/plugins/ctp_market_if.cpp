@@ -210,7 +210,14 @@ void market_if::OnRtnDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarke
 	//} else {
 	//	remote_time = utc_time - utc_time % 86400 + remote_time % 86400;
 	//}
-	if (remote_time / 86400 != utc_time / 86400 &&
+	// remote_time: 2017-09-14 00:00:03, utc_time: 2017-09-14 23:59:58
+	if (remote_ptime.time_of_day() >= time_duration(23,30,0) ||
+	    remote_ptime.time_of_day() <= time_duration(0,30,0)) {
+		while (remote_time + 1800 < utc_time) // 1800 other than 3600
+			remote_time += 3600;
+		while (remote_time - 1800 > utc_time)
+			remote_time -= 3600;
+	} else if (remote_time / 86400 != utc_time / 86400 &&
 	    (remote_time + 1800 < utc_time || remote_time - 1800 > utc_time)) {
 		remote_time = utc_time - utc_time % 86400 + remote_time % 86400;
 	}
