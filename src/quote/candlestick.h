@@ -137,17 +137,14 @@ struct candlestick<N1> operator+(const struct candlestick<N1> &former,
 template<unsigned int N>
 std::ostream & operator<<(std::ostream &os, const struct candlestick<N> &t)
 {
-	char btime[32], etime[32];
+	char btime[32];
 
 	strftime(btime, sizeof(btime), "%Y-%m-%d %H:%M:%S",
 		 localtime(&t.begin_time));
 
-	strftime(etime, sizeof(etime), "%Y-%m-%d %H:%M:%S",
-		 localtime(&t.end_time));
-
 	os << "sym:" << t.symbol
 	   << ", btm:" << btime
-	   << ", etm:" << etime
+	   << ", per:" << N
 	   << ", vol:" << t.volume
 	   << ", int:" << t.open_interest
 	   << ", close:" << t.close
