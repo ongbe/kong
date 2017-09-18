@@ -1,6 +1,6 @@
 -- ctp.sql
 
-CREATE TABLE IF NOT EXISTS candlestick_munite(
+CREATE TABLE IF NOT EXISTS candlestick_minute(
 	id            INTEGER PRIMARY KEY,
 	symbol        CHAR(16) NOT NULL,
 	begin_time    BIGINT NOT NULL,
